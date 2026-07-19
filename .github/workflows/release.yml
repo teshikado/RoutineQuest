@@ -95,18 +95,26 @@ jobs:
         run: npm ci
 
       - name: "Build macOS installers (Apple Silicon + Intel, separate DMGs)"
-        run: npm run dist:mac
+        run: |
+          # Without a real certificate (CSC_LINK unset), electron-builder still
+          # attempts *some* default signing pass and crashes outright instead
+          # of falling back to unsigned (reproduced identically across four
+          # separate CI attempts: CSC_IDENTITY_AUTO_DISCOVERY=false alone did
+          # not stop it — only explicitly forcing `mac.identity=null` via CLI
+          # override does). That override must NOT be passed once a real
+          # CSC_LINK secret exists, since identity:null unconditionally skips
+          # signing regardless of any certificate — hence the branch below
+          # instead of hardcoding it in package.json.
+          if [ -z "$CSC_LINK" ]; then
+            npm run dist:mac -- -c.mac.identity=null
+          else
+            npm run dist:mac
+          fi
         env:
           # CSC_LINK/APPLE_* are all empty/unset unless the repo owner has
           # added them under Settings → Secrets and variables → Actions —
           # see README.md "macOS: Code-Signing & Notarisierung" for what each
-          # one is. Without CSC_LINK, CSC_IDENTITY_AUTO_DISCOVERY=false stops
-          # electron-builder from searching the (empty, on a fresh CI runner)
-          # local keychain for a signing identity, which otherwise fails the
-          # build outright rather than falling back to an unsigned app —
-          # unsigned is what we actually want here. When CSC_LINK *is* set,
-          # that explicit identity is used regardless of this flag.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # one is.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}

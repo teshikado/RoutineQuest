@@ -251,20 +251,22 @@ Zusätzlich zu den Secrets muss beim Einrichten echter Signierung in
 `"hardenedRuntime": true, "entitlements": "build/entitlements.mac.plist", "entitlementsInherit": "build/entitlements.mac.plist"`
 ergänzt werden (die Entitlements-Datei liegt bereits fertig vorbereitet unter
 `build/entitlements.mac.plist`) — Apple verlangt Hardened Runtime für die
-Notarisierung. Für den aktuellen unsignierten Build wurden diese drei Felder
-bewusst weggelassen: `hardenedRuntime` ohne echtes Zertifikat hat bei einem
-Test-Build zu einem Codesign-Fehler von electron-builder geführt
-(`⨯ ... not a file`), und ohne echte Signatur bringt Hardened Runtime ohnehin
-keinen Vorteil.
+Notarisierung.
 
-**Ohne diese Secrets** (aktueller Zustand): Apple Silicon erhält trotzdem
-automatisch eine einfache **Ad-hoc-Signatur** von electron-builder — das ist
-technisch nötig, da macOS unsignierte arm64-Programme grundsätzlich nicht
-startet — das ist aber **keine** echte Signatur mit Entwickler-Identität und
-ersetzt keine Notarisierung. Gatekeeper zeigt beim ersten Start trotzdem die
+**Ohne CSC_LINK-Secret** (aktueller Zustand) baut
+`.github/workflows/release.yml` bewusst mit dem CLI-Flag
+`-c.mac.identity=null`, das electron-builder anweist, den Codesign-Schritt
+komplett zu überspringen. Das war nach mehreren echten Testläufen auf einem
+`macos-latest`-Runner nötig: `electron-builder` versucht ansonsten auch ganz
+ohne Zertifikat automatisch eine Signatur anzubringen und bricht dabei mit
+einem internen Fehler ab (weder `hardenedRuntime`/`entitlements` entfernen
+noch `CSC_IDENTITY_AUTO_DISCOVERY=false` allein behoben das). Der Build ist
+dadurch **vollständig unsigniert** — Gatekeeper zeigt beim ersten Start die
 "nicht verifizierter Entwickler"-Warnung, die Nutzer über Rechtsklick →
-"Öffnen" umgehen können (siehe oben im Download-Abschnitt). Sobald die
-Secrets gesetzt sind, entfällt diese Warnung bei zukünftigen Releases.
+"Öffnen" umgehen können (siehe oben im Download-Abschnitt). Dieses CLI-Flag
+wird nur gesetzt, wenn `CSC_LINK` **fehlt** — sobald das Secret existiert,
+baut der Workflow ohne das Flag und electron-builder verwendet das echte
+Zertifikat.
 
 ## Automatische Releases (GitHub Actions)
 
