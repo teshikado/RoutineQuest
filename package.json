@@ -92,10 +92,7 @@
       "icon": "build/icon.icns",
       "artifactName": "RoutineQuest-macOS.dmg",
       "category": "public.app-category.productivity",
-      "minimumSystemVersion": "11.0",
-      "hardenedRuntime": true,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "minimumSystemVersion": "11.0"
     },
     "dmg": {
       "title": "RoutineQuest",

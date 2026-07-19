@@ -214,11 +214,11 @@ Tests/kleine Nutzergruppen ist das nicht zwingend nötig.
 ### macOS: Code-Signing & Notarisierung
 
 **Aktueller Stand: nicht eingerichtet**, da kein Apple-Developer-Konto
-verfügbar ist. Der `.github/workflows/release.yml`-Workflow ist aber bereits
-so vorbereitet, dass er automatisch signiert und notarisiert, sobald die
+verfügbar ist. Der `.github/workflows/release.yml`-Workflow reicht die
 folgenden GitHub-Secrets (Settings → Secrets and variables → Actions →
-"New repository secret") gesetzt werden — ohne sie baut electron-builder
-einfach unsigniert weiter, nichts bricht:
+"New repository secret") bereits an `electron-builder` durch, sobald sie
+gesetzt werden — ohne sie baut electron-builder einfach unsigniert weiter,
+nichts bricht:
 
 | Secret | Bedeutung |
 |---|---|
@@ -233,6 +233,17 @@ Das erfordert ein kostenpflichtiges
 (99 $/Jahr) und ein "Developer ID Application"-Zertifikat daraus. **Nie**
 Zertifikate oder Passwörter direkt ins Repository oder in Workflow-Dateien
 eintragen — ausschließlich über GitHub Secrets.
+
+Zusätzlich zu den Secrets muss beim Einrichten echter Signierung in
+`package.json` unter `"build"."mac"` wieder
+`"hardenedRuntime": true, "entitlements": "build/entitlements.mac.plist", "entitlementsInherit": "build/entitlements.mac.plist"`
+ergänzt werden (die Entitlements-Datei liegt bereits fertig vorbereitet unter
+`build/entitlements.mac.plist`) — Apple verlangt Hardened Runtime für die
+Notarisierung. Für den aktuellen unsignierten Build wurden diese drei Felder
+bewusst weggelassen: `hardenedRuntime` ohne echtes Zertifikat hat bei einem
+Test-Build zu einem Codesign-Fehler von electron-builder geführt
+(`⨯ ... not a file`), und ohne echte Signatur bringt Hardened Runtime ohnehin
+keinen Vorteil.
 
 **Ohne diese Secrets** (aktueller Zustand): Apple Silicon erhält trotzdem
 automatisch eine einfache **Ad-hoc-Signatur** von electron-builder — das ist
