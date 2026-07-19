@@ -1,11 +1,17 @@
 name: Release Windows Installer
 
-# Builds RoutineQuest-Setup-<version>.exe and publishes it (plus the
-# electron-updater metadata file, latest.yml) to the GitHub Release matching
+# Builds RoutineQuest-Setup.exe and publishes it (plus the electron-updater
+# metadata file latest.yml and its .blockmap) to a GitHub Release matching
 # the pushed tag. Push a tag like `v1.0.0` to trigger it:
 #
 #   git tag v1.0.0
 #   git push origin v1.0.0
+#
+# The installer is only built here (electron-builder, no --publish flag) —
+# uploading is done by a separate, single step (softprops/action-gh-release)
+# instead of electron-builder's own GitHub publisher, which is prone to a
+# known race condition that creates duplicate releases for the same tag when
+# uploading multiple files (the .exe, .blockmap and latest.yml) at once.
 
 on:
   push:
@@ -37,7 +43,21 @@ jobs:
         working-directory: electron
         run: npm ci
 
-      - name: Build and publish Windows installer
-        run: npm run release:win
+      - name: Build Windows installer
+        run: npm run dist:win
+
+      - name: Verify installer filename
+        shell: bash
+        run: test -f "dist/RoutineQuest-Setup.exe"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: RoutineQuest ${{ github.ref_name }}
+          files: |
+            dist/RoutineQuest-Setup.exe
+            dist/RoutineQuest-Setup.exe.blockmap
+            dist/latest.yml
+          fail_on_unmatched_files: true
