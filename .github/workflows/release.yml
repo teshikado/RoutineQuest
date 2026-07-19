@@ -1,17 +1,20 @@
-name: Release Windows Installer
+name: Release Desktop Installers
 
-# Builds RoutineQuest-Setup.exe and publishes it (plus the electron-updater
-# metadata file latest.yml and its .blockmap) to a GitHub Release matching
-# the pushed tag. Push a tag like `v1.0.0` to trigger it:
+# Builds the Windows installer (RoutineQuest-Setup.exe) and the macOS
+# installer (RoutineQuest-macOS.dmg, a universal Apple Silicon + Intel
+# build) and publishes both to a single GitHub Release matching the pushed
+# tag. Push a tag like `v1.1.0` to trigger it:
 #
-#   git tag v1.0.0
-#   git push origin v1.0.0
+#   git tag v1.1.0
+#   git push origin v1.1.0
 #
-# The installer is only built here (electron-builder, no --publish flag) —
-# uploading is done by a separate, single step (softprops/action-gh-release)
-# instead of electron-builder's own GitHub publisher, which is prone to a
-# known race condition that creates duplicate releases for the same tag when
-# uploading multiple files (the .exe, .blockmap and latest.yml) at once.
+# Each platform only *builds* here (electron-builder, no --publish flag) and
+# uploads its output as a workflow artifact. A single, separate `publish`
+# job then downloads both artifacts and uploads everything to the release in
+# one softprops/action-gh-release step. This (not two parallel publish
+# steps) is deliberate: electron-builder's own GitHub publisher — and two
+# jobs racing to create/update the same release — are both known to create
+# duplicate/untagged releases when multiple files land at once.
 
 on:
   push:
@@ -22,7 +25,7 @@ permissions:
   contents: write
 
 jobs:
-  build-windows-installer:
+  build-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -50,6 +53,85 @@ jobs:
         shell: bash
         run: test -f "dist/RoutineQuest-Setup.exe"
 
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/RoutineQuest-Setup.exe
+            dist/RoutineQuest-Setup.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 1
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install desktop-app dependencies
+        working-directory: electron
+        run: npm ci
+
+      - name: "Build macOS installer (universal: Apple Silicon + Intel)"
+        run: npm run dist:mac
+        env:
+          # All empty/unset unless the repo owner has added them under
+          # Settings → Secrets and variables → Actions. Without them,
+          # electron-builder produces an unsigned, non-notarized build (Apple
+          # Silicon still gets electron-builder's automatic ad-hoc signature,
+          # which is required by macOS to run at all — that's not the same
+          # as a real Developer ID signature, and Gatekeeper will still warn
+          # on first launch). See README.md "macOS: Code-Signing &
+          # Notarisierung" for what each secret is and how to obtain it.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Verify installer filename
+        run: test -f "dist/RoutineQuest-macOS.dmg"
+
+      - name: Upload macOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: |
+            dist/RoutineQuest-macOS.dmg
+            dist/RoutineQuest-macOS.dmg.blockmap
+            dist/latest-mac.yml
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
+
+      - name: Download macOS build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installer
+          path: dist
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         env:
@@ -60,4 +142,7 @@ jobs:
             dist/RoutineQuest-Setup.exe
             dist/RoutineQuest-Setup.exe.blockmap
             dist/latest.yml
+            dist/RoutineQuest-macOS.dmg
+            dist/RoutineQuest-macOS.dmg.blockmap
+            dist/latest-mac.yml
           fail_on_unmatched_files: true

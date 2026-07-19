@@ -9,10 +9,14 @@
 //   - PNGs at every size needed for web manifest / apple-touch-icon / favicon
 //   - .ico files for the Next.js favicon, the Electron window icon, and the
 //     Windows installer/EXE icon (electron-builder reads build/icon.ico)
+//   - a .icns file for the macOS app/DMG icon (electron-builder reads
+//     build/icon.icns; generated with png2icons, so this runs on any OS —
+//     no macOS/iconutil required)
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const { imagesToIco } = require("png-to-ico");
+const png2icons = require("png2icons");
 
 const root = path.join(__dirname, "..");
 const SOURCE = path.join(root, "OPELogo.png");
@@ -144,6 +148,54 @@ async function buildIcoAndFavicon(masterBuffer) {
   await sharp(masterBuffer).resize(512, 512).png().toFile(path.join(APP_DIR, "icon.png"));
 }
 
+// macOS .icns (covers 16pt up to 1024pt @1x/@2x — Dock, Finder, Launchpad,
+// Spotlight, "About RoutineQuest", the .app bundle and the DMG icon all read
+// from this single file). png2icons resizes internally from the 1024 master.
+async function buildIcns(masterBuffer) {
+  const icnsBuffer = png2icons.createICNS(masterBuffer, png2icons.BICUBIC2, 0);
+  if (!icnsBuffer) {
+    throw new Error("png2icons failed to produce build/icon.icns");
+  }
+  fs.writeFileSync(path.join(BUILD_DIR, "icon.icns"), icnsBuffer);
+  fs.copyFileSync(path.join(BUILD_DIR, "icon.icns"), path.join(ELECTRON_DIR, "icon.icns"));
+}
+
+// DMG installer background: dark/purple, a soft arrow between where
+// electron-builder places the .app icon and the Applications-folder link,
+// plus a short instruction. Pure SVG (crisp at the exact DMG window size,
+// no raster upscaling), matching package.json's dmg.window/contents coords.
+const DMG_WIDTH = 660;
+const DMG_HEIGHT = 400;
+
+async function buildDmgBackground() {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${DMG_WIDTH}" height="${DMG_HEIGHT}">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0d0614"/>
+          <stop offset="100%" stop-color="#050507"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="50%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#A855F7" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#A855F7" stop-opacity="0"/>
+        </radialGradient>
+        <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L10,4 L0,8 Z" fill="#C084FC"/>
+        </marker>
+      </defs>
+      <rect width="${DMG_WIDTH}" height="${DMG_HEIGHT}" fill="url(#bg)"/>
+      <rect width="${DMG_WIDTH}" height="${DMG_HEIGHT}" fill="url(#glow)"/>
+      <line x1="230" y1="185" x2="410" y2="185" stroke="#C084FC" stroke-width="3"
+            stroke-dasharray="2 10" stroke-linecap="round" marker-end="url(#arrowhead)"/>
+      <text x="${DMG_WIDTH / 2}" y="60" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+            font-size="22" font-weight="700" fill="#F8F7FC">RoutineQuest installieren</text>
+      <text x="${DMG_WIDTH / 2}" y="285" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+            font-size="14" fill="#C8C5D2">In den Programme-Ordner ziehen, um RoutineQuest zu installieren</text>
+    </svg>
+  `;
+  await sharp(Buffer.from(svg)).png().toFile(path.join(BUILD_DIR, "dmg-background.png"));
+}
+
 async function main() {
   if (!fs.existsSync(SOURCE)) {
     throw new Error(`Logo source not found: ${SOURCE}`);
@@ -153,12 +205,16 @@ async function main() {
   const master = await buildIconMaster();
   await buildIconSizes(master);
   await buildIcoAndFavicon(master);
+  await buildIcns(master);
+  await buildDmgBackground();
 
   console.log("Generated:");
   console.log("  public/logo/logo-mark.png, logo-mark-sm.png (transparent, in-app use)");
   console.log("  public/icons/icon-master-1024.png + icon-{16..512}.png, icon-512-maskable.png");
   console.log("  src/app/icon.png, src/app/apple-icon.png, src/app/favicon.ico");
   console.log("  build/icon.ico, build/icon.png, electron/icon.ico");
+  console.log("  build/icon.icns, electron/icon.icns");
+  console.log("  build/dmg-background.png");
 }
 
 main().catch((err) => {

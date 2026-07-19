@@ -24,6 +24,17 @@ electron/node_modules
 # misc
 .DS_Store
 *.pem
+recovery-codes.txt
+
+# code-signing material — certificates/keys must never be committed; they
+# belong in GitHub Secrets (see README "macOS: Code-Signing & Notarisierung")
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.keystore
+*.jks
+electron-builder-cache/
 
 # debug
 npm-debug.log*

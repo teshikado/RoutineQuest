@@ -1,6 +1,6 @@
 {
   "name": "routinequest",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -13,7 +13,8 @@
     "electron:dev": "cross-env APP_URL=http://localhost:3000 electron .",
     "electron": "electron .",
     "icon": "node build/generate-icon.js",
-    "dist:win": "electron-builder --win --publish never"
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -45,6 +46,7 @@
     "eslint-config-next": "16.2.10",
     "playwright": "^1.61.1",
     "png-to-ico": "^3.0.2",
+    "png2icons": "^2.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
@@ -60,7 +62,6 @@
     "appId": "app.routinequest.desktop",
     "productName": "RoutineQuest",
     "asar": true,
-    "artifactName": "RoutineQuest-Setup.exe",
     "directories": {
       "app": "electron",
       "output": "dist",
@@ -69,7 +70,8 @@
     "npmRebuild": false,
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "artifactName": "RoutineQuest-Setup.exe"
     },
     "nsis": {
       "oneClick": false,
@@ -79,6 +81,34 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "artifactName": "RoutineQuest-macOS.dmg",
+      "category": "public.app-category.productivity",
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "RoutineQuest",
+      "icon": "build/icon.icns",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 660,
+        "height": 400
+      },
+      "contents": [
+        { "x": 165, "y": 165, "type": "file" },
+        { "x": 495, "y": 165, "type": "link", "path": "/Applications" }
+      ]
     },
     "publish": {
       "provider": "github",

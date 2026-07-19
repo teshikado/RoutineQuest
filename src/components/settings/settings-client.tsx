@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import { Card, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { DownloadAppSection } from "@/components/download-app-card";
 import { useToast } from "@/components/toast";
 
 type NotificationSetting = { type: string; label: string; description: string; enabled: boolean };
@@ -144,13 +146,37 @@ function PasswordSettings() {
   );
 }
 
-export function SettingsClient() {
+export function SettingsClient({ appVersion }: { appVersion: string }) {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Einstellungen</h1>
         <p className="text-[#C8C5D2] mt-1">Verwalte dein Konto und deine Benachrichtigungen.</p>
       </div>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-1">
+          <Download className="h-4 w-4 text-[#A855F7]" />
+          <CardTitle>Desktop-App</CardTitle>
+        </div>
+        <CardSubtitle className="mb-4">
+          RoutineQuest gibt es auch als natives Programm für Windows und macOS (Apple Silicon &amp; Intel). Die
+          Desktop-App lädt dieselbe RoutineQuest-Web-App wie hier im Browser — dafür wird eine Internetverbindung
+          benötigt.
+        </CardSubtitle>
+        <DownloadAppSection />
+        <p className="text-xs text-[#8D8998] mt-4">
+          Aktuelle Version: <span className="text-[#C8C5D2] font-semibold">v{appVersion}</span> ·{" "}
+          <a
+            href="https://github.com/teshikado/RoutineQuest/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#A855F7] font-semibold hover:underline"
+          >
+            Versionshinweise ansehen
+          </a>
+        </p>
+      </Card>
 
       <Card>
         <CardTitle>Benachrichtigungen</CardTitle>

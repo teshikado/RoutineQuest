@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { DownloadWindowsCard } from "@/components/download-windows-card";
+import { DownloadAppSection } from "@/components/download-app-card";
 import { Reveal } from "@/components/ui/reveal";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -42,8 +42,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {children}
       </Reveal>
 
-      <Reveal delay={0.16} className="relative">
-        <DownloadWindowsCard className="mt-6" />
+      <Reveal delay={0.16} className="relative mt-6">
+        <DownloadAppSection />
       </Reveal>
     </div>
   );
