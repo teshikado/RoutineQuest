@@ -80,7 +80,8 @@
     "publish": {
       "provider": "github",
       "owner": "teshikado",
-      "repo": "RoutineQuest"
+      "repo": "RoutineQuest",
+      "releaseType": "release"
     }
   }
 }
