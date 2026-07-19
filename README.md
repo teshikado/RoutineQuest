@@ -224,8 +224,7 @@ der App nötig.
 | `npm run electron:dev` | Desktop-Hülle gegen `localhost:3000` (mit `npm run dev` parallel) |
 | `npm run electron` | Desktop-Hülle gegen die gehostete Produktions-URL |
 | `npm run icon` | App-Icon aus `build/generate-icon.js` neu erzeugen |
-| `npm run dist:win` | Windows-Installer lokal bauen (`dist/*.exe`) |
-| `npm run release:win` | wie oben, zusätzlich Veröffentlichung als GitHub Release (nutzt CI) |
+| `npm run dist:win` | Windows-Installer lokal bauen (`dist/RoutineQuest-Setup.exe`), ohne zu veröffentlichen |
 | `npx prisma studio` | Datenbank-Browser |
 | `npx prisma migrate dev --name <name>` | neue Migration lokal erstellen + anwenden |
 | `npx prisma migrate deploy` | vorhandene Migrationen anwenden (lokal oder Produktion) |

@@ -13,8 +13,7 @@
     "electron:dev": "cross-env APP_URL=http://localhost:3000 electron .",
     "electron": "electron .",
     "icon": "node build/generate-icon.js",
-    "dist:win": "electron-builder --win",
-    "release:win": "electron-builder --win --publish always"
+    "dist:win": "electron-builder --win --publish never"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
