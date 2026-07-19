@@ -10,7 +10,7 @@ const path = require("path");
 //
 // Override for local development: `npm run electron:dev` sets APP_URL to
 // http://localhost:3000 so the wrapper points at your local `next dev` server.
-const APP_URL = process.env.APP_URL || "https://routinequest.vercel.app";
+const APP_URL = process.env.APP_URL || "https://routine-quest-rouge.vercel.app";
 
 let mainWindow;
 
