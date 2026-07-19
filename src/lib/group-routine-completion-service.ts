@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
-import { addDaysUtc, isFutureDay, todayDateOnly, toDateOnly } from "./dates";
+import { addDaysUtc, dateKey, isFutureDay, todayDateOnly, toDateOnly } from "./dates";
 import { getLevelProgress, getRankForLevel } from "./xp";
 import { notify } from "./notifications";
 import { recomputeTotalXp } from "./completion-service";
 import { isGroupRoutinePlannedDay } from "./group-routine-data";
+import { computeWeeklyTargetStreak } from "./group-routine-weekly";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -15,7 +16,7 @@ export class GroupRoutineCompletionError extends Error {}
 
 async function recomputeParticipantStreak(
   tx: TxClient,
-  routine: Parameters<typeof isGroupRoutinePlannedDay>[0] & { id: string },
+  routine: Parameters<typeof isGroupRoutinePlannedDay>[0] & { id: string; goalType: string; goalTarget: number | null },
   participantId: string,
   userId: string
 ): Promise<number> {
@@ -23,31 +24,45 @@ async function recomputeParticipantStreak(
   if (!participant.joinedAt) return 0;
 
   const today = todayDateOnly();
-  const joinedDay = toDateOnly(participant.joinedAt);
-  let current = 0;
+  let current: number;
+  let longest: number;
 
-  if (isGroupRoutinePlannedDay(routine, participant, today)) {
-    const doneToday = await tx.groupRoutineCompletion.findUnique({
-      where: { groupRoutineId_userId_date: { groupRoutineId: routine.id, userId, date: today } },
+  if (routine.goalType === "WEEKLY") {
+    const completions = await tx.groupRoutineCompletion.findMany({
+      where: { groupRoutineId: routine.id, userId },
+      select: { date: true },
     });
-    if (doneToday) current += 1;
-  }
+    const completedDates = new Set(completions.map((c) => dateKey(c.date)));
+    const result = computeWeeklyTargetStreak(routine, participant, completedDates, today);
+    current = result.current;
+    longest = result.longest;
+  } else {
+    const joinedDay = toDateOnly(participant.joinedAt);
+    current = 0;
 
-  let cursor = addDaysUtc(today, -1);
-  for (let i = 0; i < STREAK_LOOKBACK_DAYS && cursor >= joinedDay; i++) {
-    if (!isGroupRoutinePlannedDay(routine, participant, cursor)) {
-      cursor = addDaysUtc(cursor, -1);
-      continue;
+    if (isGroupRoutinePlannedDay(routine, participant, today)) {
+      const doneToday = await tx.groupRoutineCompletion.findUnique({
+        where: { groupRoutineId_userId_date: { groupRoutineId: routine.id, userId, date: today } },
+      });
+      if (doneToday) current += 1;
     }
-    const done = await tx.groupRoutineCompletion.findUnique({
-      where: { groupRoutineId_userId_date: { groupRoutineId: routine.id, userId, date: cursor } },
-    });
-    if (!done) break;
-    current += 1;
-    cursor = addDaysUtc(cursor, -1);
+
+    let cursor = addDaysUtc(today, -1);
+    for (let i = 0; i < STREAK_LOOKBACK_DAYS && cursor >= joinedDay; i++) {
+      if (!isGroupRoutinePlannedDay(routine, participant, cursor)) {
+        cursor = addDaysUtc(cursor, -1);
+        continue;
+      }
+      const done = await tx.groupRoutineCompletion.findUnique({
+        where: { groupRoutineId_userId_date: { groupRoutineId: routine.id, userId, date: cursor } },
+      });
+      if (!done) break;
+      current += 1;
+      cursor = addDaysUtc(cursor, -1);
+    }
+    longest = Math.max(participant.longestStreak, current);
   }
 
-  const longest = Math.max(participant.longestStreak, current);
   await tx.groupRoutineParticipant.update({
     where: { id: participant.id },
     data: { currentStreak: current, longestStreak: longest },

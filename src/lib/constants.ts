@@ -167,10 +167,6 @@ export const NOTIFICATION_META: Record<NotificationType, { label: string; descri
     label: "Neue Gruppeneinladung",
     description: "Benachrichtigung bei neuen Einladungen zu Gruppen.",
   },
-  GROUP_CHALLENGE: {
-    label: "Gruppen-Challenge",
-    description: "Updates zu Fortschritt und Start neuer Challenges.",
-  },
   LEVEL_UP: {
     label: "Levelaufstieg",
     description: "Benachrichtigung, wenn du ein neues Level erreichst.",
@@ -230,12 +226,3 @@ export const GROUP_ROUTINE_AWARD_META: Record<GroupRoutineAwardType, AwardDef> =
   },
 };
 
-export const GROUP_ROUTINE_VISIBILITY_LABELS: Record<string, string> = {
-  ALL_MEMBERS: "Alle Gruppenmitglieder",
-  PARTICIPANTS_ONLY: "Nur Teilnehmende",
-};
-
-export const GROUP_ROUTINE_GOAL_LABELS: Record<string, string> = {
-  NONE: "Kein Zusatzziel",
-  WEEKLY: "Wöchentliches Ziel",
-};

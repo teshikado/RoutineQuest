@@ -5,16 +5,8 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { DynamicIcon } from "@/components/ui/icon";
-import {
-  CATEGORY_META,
-  DIFFICULTY_META,
-  GROUP_ROUTINE_GOAL_LABELS,
-  GROUP_ROUTINE_VISIBILITY_LABELS,
-  ROUTINE_COLORS,
-  ROUTINE_ICONS,
-  WEEKDAY_LABELS,
-} from "@/lib/constants";
-import { dateKey, todayDateOnly } from "@/lib/dates";
+import { CATEGORY_META, DIFFICULTY_META, ROUTINE_COLORS, ROUTINE_ICONS, WEEKDAY_LABELS } from "@/lib/constants";
+import { addDaysUtc, addMonthsUtc, dateKey, parseDateKey, todayDateOnly } from "@/lib/dates";
 import type { Category, Difficulty } from "@prisma/client";
 
 export type GroupRoutineFormValues = {
@@ -53,6 +45,69 @@ const DEFAULT_VALUES: GroupRoutineFormValues = {
   goalTarget: "3",
 };
 
+type PeriodPreset = "week1" | "week2" | "month1" | "month3" | "custom";
+
+const PERIOD_PRESETS: { key: PeriodPreset; label: string }[] = [
+  { key: "week1", label: "1 Woche" },
+  { key: "week2", label: "2 Wochen" },
+  { key: "month1", label: "1 Monat" },
+  { key: "month3", label: "3 Monate" },
+  { key: "custom", label: "Benutzerdefiniert" },
+];
+
+/** Inclusive end date for a period preset, given a start date. */
+function endDateForPeriodPreset(preset: PeriodPreset, start: Date): Date | null {
+  switch (preset) {
+    case "week1":
+      return addDaysUtc(start, 6);
+    case "week2":
+      return addDaysUtc(start, 13);
+    case "month1":
+      return addDaysUtc(addMonthsUtc(start, 1), -1);
+    case "month3":
+      return addDaysUtc(addMonthsUtc(start, 3), -1);
+    case "custom":
+      return null;
+  }
+}
+
+/** Best-guess period preset for an existing start/end pair (used when editing/duplicating). */
+function detectPeriodPreset(startDate: string, endDate: string): PeriodPreset {
+  if (!startDate || !endDate) return "custom";
+  const start = parseDateKey(startDate);
+  for (const preset of ["week1", "week2", "month1", "month3"] as const) {
+    const expected = endDateForPeriodPreset(preset, start);
+    if (expected && dateKey(expected) === endDate) return preset;
+  }
+  return "custom";
+}
+
+type RepetitionPreset = "daily" | "weekdays" | "weekend" | "custom_days" | "weekly_count";
+
+const REPETITION_PRESETS: { key: RepetitionPreset; label: string }[] = [
+  { key: "daily", label: "Jeden Tag" },
+  { key: "weekdays", label: "Nur Werktage" },
+  { key: "weekend", label: "Nur Wochenende" },
+  { key: "custom_days", label: "Bestimmte Wochentage" },
+  { key: "weekly_count", label: "Bestimmte Anzahl pro Woche" },
+];
+
+const REPETITION_DAYS: Record<Exclude<RepetitionPreset, "custom_days" | "weekly_count">, number[]> = {
+  daily: [1, 2, 3, 4, 5, 6, 7],
+  weekdays: [1, 2, 3, 4, 5],
+  weekend: [6, 7],
+};
+
+function detectRepetitionPreset(scheduledDays: number[], goalType: GroupRoutineFormValues["goalType"]): RepetitionPreset {
+  if (goalType === "WEEKLY") return "weekly_count";
+  const sorted = [...scheduledDays].sort((a, b) => a - b);
+  const matches = (days: number[]) => sorted.length === days.length && days.every((d) => sorted.includes(d));
+  if (matches(REPETITION_DAYS.daily)) return "daily";
+  if (matches(REPETITION_DAYS.weekdays)) return "weekdays";
+  if (matches(REPETITION_DAYS.weekend)) return "weekend";
+  return "custom_days";
+}
+
 export function GroupRoutineForm({
   initialValues,
   onSubmit,
@@ -65,8 +120,45 @@ export function GroupRoutineForm({
   onCancel?: () => void;
 }) {
   const [values, setValues] = useState<GroupRoutineFormValues>({ ...DEFAULT_VALUES, ...initialValues });
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>(() =>
+    detectPeriodPreset(values.startDate, values.endDate)
+  );
+  const [repetitionPreset, setRepetitionPreset] = useState<RepetitionPreset>(() =>
+    detectRepetitionPreset(values.scheduledDays, values.goalType)
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function applyPeriodPreset(preset: PeriodPreset, startOverride?: string) {
+    setPeriodPreset(preset);
+    const startKey = startOverride ?? values.startDate;
+    if (preset === "custom" || !startKey) return;
+    const end = endDateForPeriodPreset(preset, parseDateKey(startKey));
+    if (end) setValues((v) => ({ ...v, startDate: startKey, endDate: dateKey(end) }));
+  }
+
+  function handleStartDateChange(startKey: string) {
+    if (periodPreset === "custom") {
+      setValues((v) => ({ ...v, startDate: startKey }));
+    } else {
+      applyPeriodPreset(periodPreset, startKey);
+    }
+  }
+
+  function applyRepetitionPreset(preset: RepetitionPreset) {
+    setRepetitionPreset(preset);
+    if (preset === "custom_days") {
+      setValues((v) => ({
+        ...v,
+        goalType: "NONE",
+        scheduledDays: v.scheduledDays.length > 0 ? v.scheduledDays : [1, 2, 3, 4, 5],
+      }));
+    } else if (preset === "weekly_count") {
+      setValues((v) => ({ ...v, goalType: "WEEKLY", scheduledDays: [1, 2, 3, 4, 5, 6, 7] }));
+    } else {
+      setValues((v) => ({ ...v, goalType: "NONE", scheduledDays: REPETITION_DAYS[preset] }));
+    }
+  }
 
   function toggleDay(day: number) {
     setValues((v) => ({
@@ -89,8 +181,12 @@ export function GroupRoutineForm({
       setError("Wähle mindestens einen Wochentag.");
       return;
     }
+    if (values.endDate && values.endDate < values.startDate) {
+      setError("Das Enddatum muss nach dem Startdatum liegen.");
+      return;
+    }
     if (values.goalType === "WEEKLY" && (!values.goalTarget || Number(values.goalTarget) < 1)) {
-      setError("Bitte gib eine Zielzahl für das Wochenziel an.");
+      setError("Bitte gib eine Zielzahl pro Woche an.");
       return;
     }
 
@@ -228,46 +324,49 @@ export function GroupRoutineForm({
       </div>
 
       <div>
-        <Label>Wochentage</Label>
-        <div className="grid grid-cols-7 gap-1.5">
-          {Object.entries(WEEKDAY_LABELS).map(([day, label]) => (
+        <Label>Zeitraum</Label>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {PERIOD_PRESETS.map((p) => (
             <button
               type="button"
-              key={day}
-              onClick={() => toggleDay(Number(day))}
-              aria-pressed={values.scheduledDays.includes(Number(day))}
+              key={p.key}
+              onClick={() => applyPeriodPreset(p.key)}
+              aria-pressed={periodPreset === p.key}
               className={clsx(
-                "h-10 rounded-lg text-xs font-bold transition-colors",
-                values.scheduledDays.includes(Number(day))
+                "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                periodPreset === p.key
                   ? "bg-[#4FA8D8] text-white"
                   : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
               )}
             >
-              {label}
+              {p.label}
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="gr-start">Startdatum</Label>
-          <Input
-            id="gr-start"
-            type="date"
-            value={values.startDate}
-            onChange={(e) => setValues((v) => ({ ...v, startDate: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="gr-end">Enddatum (optional)</Label>
-          <Input
-            id="gr-end"
-            type="date"
-            value={values.endDate}
-            onChange={(e) => setValues((v) => ({ ...v, endDate: e.target.value }))}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="gr-start">Startdatum</Label>
+            <Input
+              id="gr-start"
+              type="date"
+              value={values.startDate}
+              onChange={(e) => handleStartDateChange(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="gr-end">
+              Enddatum {periodPreset === "custom" ? "(optional)" : ""}
+            </Label>
+            <Input
+              id="gr-end"
+              type="date"
+              value={values.endDate}
+              disabled={periodPreset !== "custom"}
+              onChange={(e) => setValues((v) => ({ ...v, endDate: e.target.value }))}
+              className={periodPreset !== "custom" ? "opacity-60" : ""}
+            />
+          </div>
         </div>
       </div>
 
@@ -281,33 +380,66 @@ export function GroupRoutineForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Zusatzziel</Label>
-          <select
-            value={values.goalType}
-            onChange={(e) => setValues((v) => ({ ...v, goalType: e.target.value as GroupRoutineFormValues["goalType"] }))}
-            className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
-          >
-            {Object.entries(GROUP_ROUTINE_GOAL_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+      <div>
+        <Label>Wiederholung</Label>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {REPETITION_PRESETS.map((p) => (
+            <button
+              type="button"
+              key={p.key}
+              onClick={() => applyRepetitionPreset(p.key)}
+              aria-pressed={repetitionPreset === p.key}
+              className={clsx(
+                "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                repetitionPreset === p.key
+                  ? "bg-[#4FA8D8] text-white"
+                  : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-        {values.goalType === "WEEKLY" && (
+
+        {repetitionPreset === "custom_days" && (
+          <div className="grid grid-cols-7 gap-1.5">
+            {Object.entries(WEEKDAY_LABELS).map(([day, label]) => (
+              <button
+                type="button"
+                key={day}
+                onClick={() => toggleDay(Number(day))}
+                aria-pressed={values.scheduledDays.includes(Number(day))}
+                className={clsx(
+                  "h-10 rounded-lg text-xs font-bold transition-colors",
+                  values.scheduledDays.includes(Number(day))
+                    ? "bg-[#4FA8D8] text-white"
+                    : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {repetitionPreset === "weekly_count" && (
           <div>
-            <Label htmlFor="gr-goal-target">Zielzahl pro Woche</Label>
-            <Input
+            <Label htmlFor="gr-goal-target">Wie oft pro Woche?</Label>
+            <select
               id="gr-goal-target"
-              type="number"
-              min={1}
-              max={7}
               value={values.goalTarget}
               onChange={(e) => setValues((v) => ({ ...v, goalTarget: e.target.value }))}
-              required
-            />
+              className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}× pro Woche
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-[#5b7a91] mt-1.5">
+              Mitglieder können sich die Tage selbst aussuchen, an denen sie die Routine erledigen.
+            </p>
           </div>
         )}
       </div>
@@ -319,11 +451,8 @@ export function GroupRoutineForm({
           onChange={(e) => setValues((v) => ({ ...v, visibility: e.target.value as GroupRoutineFormValues["visibility"] }))}
           className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
         >
-          {Object.entries(GROUP_ROUTINE_VISIBILITY_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
+          <option value="ALL_MEMBERS">Alle Gruppenmitglieder</option>
+          <option value="PARTICIPANTS_ONLY">Nur Teilnehmende</option>
         </select>
       </div>
 

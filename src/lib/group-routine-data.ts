@@ -1,7 +1,7 @@
 import type { GroupRoutine, GroupRoutineParticipant, Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { DIFFICULTY_META } from "./constants";
-import { dateKey, isFutureDay, isoWeekday, todayDateOnly, toDateOnly, type WeekInfo } from "./dates";
+import { addDaysUtc, dateKey, isFutureDay, isoWeekday, todayDateOnly, toDateOnly, type WeekInfo } from "./dates";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -29,6 +29,29 @@ export function isGroupRoutinePlannedDay(
   if (routine.status === "ENDED" && routine.endedAt && day >= toDateOnly(routine.endedAt)) return false;
 
   return true;
+}
+
+/**
+ * Flips ACTIVE/PAUSED routines whose endDate has fully passed into ENDED, so they move
+ * to "Beendete Routinen" and stop accepting new completions. `endedAt` is set to the day
+ * after `endDate` so the ENDED-status gate in `isGroupRoutinePlannedDay` agrees exactly
+ * with the endDate gate — the end date itself stays a valid, already-decided past day.
+ * Idempotent, safe to call on every read.
+ */
+export async function autoEndDueRoutines(groupId: string) {
+  const today = todayDateOnly();
+  const dueRoutines = await prisma.groupRoutine.findMany({
+    where: { groupId, deletedAt: null, status: { in: ["ACTIVE", "PAUSED"] }, endDate: { lt: today } },
+    select: { id: true, endDate: true },
+  });
+  await Promise.all(
+    dueRoutines.map((r) =>
+      prisma.groupRoutine.update({
+        where: { id: r.id },
+        data: { status: "ENDED", endedAt: addDaysUtc(toDateOnly(r.endDate!), 1) },
+      })
+    )
+  );
 }
 
 /** Creates PENDING participation rows for members who don't have one yet on ALL_MEMBERS routines they can already see. */
@@ -108,7 +131,29 @@ export function defaultXpReward(difficulty: keyof typeof DIFFICULTY_META): numbe
   return DIFFICULTY_META[difficulty].xp;
 }
 
+export type GroupRoutineBucket = "upcoming" | "active" | "ended";
+
+/** Which of the three "Gruppenroutinen" sections a routine belongs in, plus "Tag X von Y" / "Noch N Tage" figures. */
+export function getGroupRoutinePeriodInfo(routine: Pick<GroupRoutine, "startDate" | "endDate" | "status">) {
+  const today = todayDateOnly();
+  const start = toDateOnly(routine.startDate);
+  const end = routine.endDate ? toDateOnly(routine.endDate) : null;
+  const msPerDay = 24 * 60 * 60 * 1000;
+
+  const bucket: GroupRoutineBucket =
+    routine.status === "ENDED" || (end !== null && today > end) ? "ended" : today < start ? "upcoming" : "active";
+
+  const totalDays = end ? Math.round((end.getTime() - start.getTime()) / msPerDay) + 1 : null;
+  const rawDayNumber = Math.round((today.getTime() - start.getTime()) / msPerDay) + 1;
+  const dayNumber =
+    bucket === "upcoming" ? null : totalDays !== null ? Math.min(rawDayNumber, totalDays) : Math.max(rawDayNumber, 1);
+  const daysRemaining = end !== null && bucket === "active" ? Math.max(0, Math.round((end.getTime() - today.getTime()) / msPerDay)) : null;
+
+  return { bucket, dayNumber, totalDays, daysRemaining };
+}
+
 export async function getGroupRoutineList(groupId: string, userId: string) {
+  await autoEndDueRoutines(groupId);
   await ensurePendingParticipation(groupId, userId);
 
   const membership = await prisma.groupMember.findUnique({ where: { groupId_userId: { groupId, userId } } });
@@ -151,10 +196,17 @@ export async function getGroupRoutineList(groupId: string, userId: string) {
     myParticipation: r.participants[0]
       ? { status: r.participants[0].status, joinedAt: r.participants[0].joinedAt?.toISOString() ?? null }
       : null,
+    ...getGroupRoutinePeriodInfo(r),
   }));
 }
 
 export async function getGroupRoutineDetail(groupRoutineId: string, userId: string) {
+  const routineForGroup = await prisma.groupRoutine.findUnique({
+    where: { id: groupRoutineId },
+    select: { groupId: true },
+  });
+  if (routineForGroup) await autoEndDueRoutines(routineForGroup.groupId);
+
   const routine = await prisma.groupRoutine.findUnique({
     where: { id: groupRoutineId },
     include: {
@@ -183,6 +235,10 @@ export async function getGroupRoutineDetail(groupRoutineId: string, userId: stri
     todayStatus = doneToday ? "done" : "open";
   }
 
+  const completionCount = isLeader
+    ? await prisma.groupRoutineCompletion.count({ where: { groupRoutineId } })
+    : 0;
+
   return {
     id: routine.id,
     groupId: routine.groupId,
@@ -205,6 +261,7 @@ export async function getGroupRoutineDetail(groupRoutineId: string, userId: stri
     status: routine.status,
     createdById: routine.createdById,
     isLeader,
+    canDelete: isLeader && completionCount === 0,
     todayStatus,
     myParticipation: myParticipation
       ? {
@@ -214,6 +271,7 @@ export async function getGroupRoutineDetail(groupRoutineId: string, userId: stri
           longestStreak: myParticipation.longestStreak,
         }
       : null,
+    ...getGroupRoutinePeriodInfo(routine),
   };
 }
 

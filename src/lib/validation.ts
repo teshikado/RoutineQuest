@@ -65,50 +65,44 @@ export const groupSchema = z.object({
   isPrivate: z.boolean().optional(),
 });
 
-export const groupRoutineSchema = z
-  .object({
-    title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(60),
-    description: z.string().trim().max(300).optional().nullable(),
-    category: z.enum([
-      "FITNESS",
-      "LEARNING",
-      "HEALTH",
-      "PRODUCTIVITY",
-      "HOUSEHOLD",
-      "RELAXATION",
-      "PERSONAL_GOALS",
-    ]),
-    icon: z.string().min(1),
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-    difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
-    xpReward: z.number().int().min(5).max(500),
-    startDate: z.string(),
-    endDate: z.string().optional().nullable(),
-    scheduledDays: z.array(z.number().int().min(1).max(7)).min(1, "Wähle mindestens einen Wochentag."),
-    timeOfDay: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-      .optional()
-      .nullable(),
-    visibility: z.enum(["ALL_MEMBERS", "PARTICIPANTS_ONLY"]),
-    mandatory: z.boolean().optional(),
-    goalType: z.enum(["NONE", "WEEKLY"]).optional(),
-    goalTarget: z.number().int().min(1).max(7).optional().nullable(),
-  })
-  .refine((data) => data.goalType !== "WEEKLY" || (data.goalTarget ?? 0) > 0, {
-    message: "Bitte gib eine Zielzahl für das Wochenziel an.",
-    path: ["goalTarget"],
-  });
+// Kept as a plain (non-refined) object schema so `.partial()` stays usable for PATCH
+// requests — Zod v4 does not support `.partial()` on a schema wrapped in `.refine()`.
+// The goalType/goalTarget pairing is validated separately wherever it matters instead.
+export const groupRoutineBaseSchema = z.object({
+  title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(60),
+  description: z.string().trim().max(300).optional().nullable(),
+  category: z.enum([
+    "FITNESS",
+    "LEARNING",
+    "HEALTH",
+    "PRODUCTIVITY",
+    "HOUSEHOLD",
+    "RELAXATION",
+    "PERSONAL_GOALS",
+  ]),
+  icon: z.string().min(1),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
+  xpReward: z.number().int().min(5).max(500),
+  startDate: z.string(),
+  endDate: z.string().optional().nullable(),
+  scheduledDays: z.array(z.number().int().min(1).max(7)).min(1, "Wähle mindestens einen Wochentag."),
+  timeOfDay: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .optional()
+    .nullable(),
+  visibility: z.enum(["ALL_MEMBERS", "PARTICIPANTS_ONLY"]),
+  mandatory: z.boolean().optional(),
+  goalType: z.enum(["NONE", "WEEKLY"]).optional(),
+  goalTarget: z.number().int().min(1).max(7).optional().nullable(),
+});
+
+export const groupRoutineSchema = groupRoutineBaseSchema.refine(
+  (data) => data.goalType !== "WEEKLY" || (data.goalTarget ?? 0) > 0,
+  { message: "Bitte gib eine Zielzahl für das Wochenziel an.", path: ["goalTarget"] }
+);
 
 export const participationResponseSchema = z.object({
   decision: z.enum(["JOIN", "DECLINE", "LATER"]),
-});
-
-export const challengeSchema = z.object({
-  title: z.string().trim().min(2).max(60),
-  description: z.string().trim().max(200).optional().nullable(),
-  type: z.enum(["TASKS_COUNT", "STREAK_DAYS", "XP_TOTAL", "PERFECT_WEEK"]),
-  target: z.number().int().min(1),
-  startDate: z.string(),
-  endDate: z.string(),
 });

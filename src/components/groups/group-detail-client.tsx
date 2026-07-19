@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   ShieldOff,
   LogOut,
-  Plus,
   Trophy,
   Send,
   Lock,
@@ -23,38 +22,15 @@ import { Card, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/empty-state";
 import { DynamicIcon } from "@/components/ui/icon";
 import { GroupForm, type GroupFormValues } from "@/components/groups/group-form";
-import { ChallengeForm, type ChallengeFormValues } from "@/components/groups/challenge-form";
 import { useToast } from "@/components/toast";
 import type { GroupDetail } from "@/lib/group-data";
 
-type ChallengeData = {
-  id: string;
-  title: string;
-  description: string | null;
-  type: string;
-  target: number;
-  progress: number;
-  ratio: number;
-  completed: boolean;
-  startDate: string;
-  endDate: string;
-};
-
-const CHALLENGE_TYPE_LABELS: Record<string, string> = {
-  TASKS_COUNT: "Aufgaben gemeinsam erledigt",
-  STREAK_DAYS: "Tage in Folge aktiv",
-  XP_TOTAL: "Gemeinsame XP gesammelt",
-  PERFECT_WEEK: "Mitglieder mit perfekter Woche",
-};
-
 const ROLE_LABELS: Record<string, string> = { OWNER: "Besitzer", ADMIN: "Admin", MEMBER: "Mitglied" };
 
-export function GroupDetailClient({ group, challenges }: { group: GroupDetail; challenges: ChallengeData[] }) {
+export function GroupDetailClient({ group }: { group: GroupDetail }) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -62,7 +38,6 @@ export function GroupDetailClient({ group, challenges }: { group: GroupDetail; c
   const [inviteCode, setInviteCode] = useState(group.activeInviteCode);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [challengeOpen, setChallengeOpen] = useState(false);
   const [inviteTarget, setInviteTarget] = useState("");
   const [removeTarget, setRemoveTarget] = useState<(typeof members)[number] | null>(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -170,19 +145,6 @@ export function GroupDetailClient({ group, challenges }: { group: GroupDetail; c
     } else {
       showToast("Aktion fehlgeschlagen.", "error");
     }
-  }
-
-  async function handleCreateChallenge(values: ChallengeFormValues) {
-    const res = await fetch(`/api/groups/${group.id}/challenges`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...values, target: Number(values.target) }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Challenge konnte nicht erstellt werden.");
-    showToast("Challenge gestartet!", "success");
-    setChallengeOpen(false);
-    router.refresh();
   }
 
   return (
@@ -311,47 +273,6 @@ export function GroupDetailClient({ group, challenges }: { group: GroupDetail; c
         </ul>
       </Card>
 
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <CardTitle>Gruppen-Challenges</CardTitle>
-          {canManage && (
-            <Button size="sm" onClick={() => setChallengeOpen(true)}>
-              <Plus className="h-4 w-4" /> Challenge starten
-            </Button>
-          )}
-        </div>
-        {challenges.length === 0 ? (
-          <EmptyState
-            icon="Trophy"
-            title="Noch keine Challenge"
-            description="Startet gemeinsam eine Challenge, um euch gegenseitig zu motivieren."
-          />
-        ) : (
-          <div className="space-y-4">
-            {challenges.map((c) => (
-              <div key={c.id} className="rounded-xl border border-[#EAF7FC] p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-[#183B56]">{c.title}</span>
-                  {c.completed && (
-                    <span className="text-xs font-bold text-white bg-[#78D6B0] rounded-full px-2.5 py-1">
-                      Abgeschlossen
-                    </span>
-                  )}
-                </div>
-                {c.description && <p className="text-xs text-[#5b7a91] mb-2">{c.description}</p>}
-                <ProgressBar ratio={c.ratio} colorClass={c.completed ? "bg-[#78D6B0]" : "bg-[#4FA8D8]"} />
-                <div className="flex justify-between text-xs text-[#5b7a91] mt-1.5">
-                  <span>{CHALLENGE_TYPE_LABELS[c.type]}</span>
-                  <span className="font-semibold">
-                    {c.progress} / {c.target}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Gruppe bearbeiten">
         <GroupForm
           onSubmit={handleEditGroup}
@@ -366,10 +287,6 @@ export function GroupDetailClient({ group, challenges }: { group: GroupDetail; c
             isPrivate: group.isPrivate,
           }}
         />
-      </Modal>
-
-      <Modal open={challengeOpen} onClose={() => setChallengeOpen(false)} title="Neue Challenge">
-        <ChallengeForm onSubmit={handleCreateChallenge} onCancel={() => setChallengeOpen(false)} />
       </Modal>
 
       <ConfirmDialog

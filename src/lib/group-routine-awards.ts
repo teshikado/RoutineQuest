@@ -2,6 +2,7 @@ import type { GroupRoutineAwardType, Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { dateKey, getWeekInfo, todayDateOnly } from "./dates";
 import { isGroupRoutinePlannedDay } from "./group-routine-data";
+import { computeWeeklyTargetProgress } from "./group-routine-weekly";
 import { GROUP_ROUTINE_AWARD_META, GROUP_ROUTINE_CHAMPION_BONUS_XP } from "./constants";
 import { recomputeTotalXp } from "./completion-service";
 
@@ -33,7 +34,7 @@ async function awardBadge(tx: TxClient, groupRoutineId: string, weekKey: string,
   });
   const badge = await ensureBadge(tx, type);
   const existingBadge = await tx.userBadge.findFirst({
-    where: { userId, badgeId: badge.id, challengeId: null, groupRoutineId },
+    where: { userId, badgeId: badge.id, groupRoutineId },
   });
   if (!existingBadge) {
     await tx.userBadge.create({ data: { userId, badgeId: badge.id, groupRoutineId } });
@@ -68,6 +69,13 @@ export async function computeWeeklyAwards(groupRoutineId: string, weekStart: Dat
   });
 
   function statsFor(participant: (typeof participants)[number], w: ReturnType<typeof getWeekInfo>) {
+    if (routine.goalType === "WEEKLY") {
+      const completedDates = new Set(
+        completions.filter((c) => c.userId === participant.userId).map((c) => dateKey(c.date))
+      );
+      const { planned, completed: done } = computeWeeklyTargetProgress(routine, participant, completedDates, w.start, w.end);
+      return { planned, done, rate: planned > 0 ? done / planned : null };
+    }
     let planned = 0;
     let done = 0;
     for (const d of w.days) {

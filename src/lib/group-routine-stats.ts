@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { addDaysUtc, dateKey, getWeekInfo, isFutureDay, todayDateOnly } from "./dates";
 import { isGroupRoutinePlannedDay } from "./group-routine-data";
+import { computeWeeklyTargetProgress } from "./group-routine-weekly";
 
 const TREND_PERIODS = 8;
 const HEATMAP_DAYS = 28;
@@ -30,6 +31,17 @@ export async function getGroupRoutineStats(groupRoutineId: string, period: Group
   function rateForRange(userId: string, start: Date, end: Date) {
     const participant = participants.find((p) => p.userId === userId);
     if (!participant) return { planned: 0, done: 0, rate: null as number | null };
+
+    if (routine.goalType === "WEEKLY") {
+      const completedDates = new Set(
+        completions.filter((c) => c.userId === userId).map((c) => dateKey(c.date))
+      );
+      const cappedEnd = isFutureDay(end) ? todayDateOnly() : end;
+      if (cappedEnd < start) return { planned: 0, done: 0, rate: null as number | null };
+      const { planned, completed: done } = computeWeeklyTargetProgress(routine, participant, completedDates, start, cappedEnd);
+      return { planned, done, rate: planned > 0 ? done / planned : null };
+    }
+
     let planned = 0;
     let done = 0;
     for (let d = start; d <= end; d = addDaysUtc(d, 1)) {

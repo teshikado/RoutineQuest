@@ -225,7 +225,7 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
           <EmptyState
             icon="Award"
             title="Noch keine Abzeichen"
-            description="Schließe Gruppen-Challenges ab, um digitale Abzeichen zu sammeln."
+            description="Nimm an Gruppenroutinen teil, um digitale Abzeichen zu sammeln."
           />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

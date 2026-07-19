@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Check,
   Circle,
+  Copy,
   Minus,
   Pause,
   Play,
@@ -65,6 +66,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
   const [endOpen, setEndOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [burst, setBurst] = useState(false);
   const [awards, setAwards] = useState<AwardsResponse | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -160,6 +162,26 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
     setEditOpen(false);
     showToast("Gruppenroutine aktualisiert!", "success");
     router.refresh();
+  }
+
+  async function handleDuplicate(values: GroupRoutineFormValues) {
+    const res = await fetch(`/api/groups/${detail.groupId}/routines`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...values,
+        xpReward: Number(values.xpReward),
+        description: values.description || null,
+        timeOfDay: values.timeOfDay || null,
+        endDate: values.endDate || null,
+        goalTarget: values.goalType === "WEEKLY" ? Number(values.goalTarget) : null,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Duplizieren fehlgeschlagen.");
+    setDuplicateOpen(false);
+    showToast("Neue Gruppenroutine aus Duplikat erstellt!", "success");
+    router.push(`/groups/${detail.groupId}/routines/${data.id}`);
   }
 
   async function handlePauseToggle() {
@@ -261,9 +283,14 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
                   <StopCircle className="h-4 w-4" /> Beenden
                 </Button>
               )}
-              <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="h-4 w-4" /> Löschen
+              <Button variant="secondary" size="sm" onClick={() => setDuplicateOpen(true)}>
+                <Copy className="h-4 w-4" /> Duplizieren
               </Button>
+              {detail.canDelete && (
+                <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="h-4 w-4" /> Löschen
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -404,6 +431,31 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
             xpReward: String(detail.xpReward),
             startDate: detail.startDate.slice(0, 10),
             endDate: detail.endDate ? detail.endDate.slice(0, 10) : "",
+            scheduledDays: detail.scheduledDays,
+            timeOfDay: detail.timeOfDay ?? "",
+            visibility: detail.visibility,
+            mandatory: detail.mandatory,
+            goalType: detail.goalType,
+            goalTarget: detail.goalTarget ? String(detail.goalTarget) : "3",
+          }}
+        />
+      </Modal>
+
+      <Modal open={duplicateOpen} onClose={() => setDuplicateOpen(false)} title="Gruppenroutine duplizieren">
+        <GroupRoutineForm
+          onSubmit={handleDuplicate}
+          onCancel={() => setDuplicateOpen(false)}
+          submitLabel="Duplikat erstellen"
+          initialValues={{
+            title: `${detail.title} (Kopie)`,
+            description: detail.description ?? "",
+            category: detail.category as Category,
+            icon: detail.icon,
+            color: detail.color,
+            difficulty: detail.difficulty as Difficulty,
+            xpReward: String(detail.xpReward),
+            startDate: dateKey(todayDateOnly()),
+            endDate: "",
             scheduledDays: detail.scheduledDays,
             timeOfDay: detail.timeOfDay ?? "",
             visibility: detail.visibility,

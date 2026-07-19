@@ -23,6 +23,10 @@ export function addDaysUtc(date: Date, amount: number): Date {
   return d;
 }
 
+export function addMonthsUtc(date: Date, amount: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, date.getUTCDate()));
+}
+
 export function dateKey(date: Date): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");

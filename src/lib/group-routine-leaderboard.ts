@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { addDaysUtc, dateKey, getWeekInfo, isFutureDay, todayDateOnly, toDateOnly } from "./dates";
 import { isGroupRoutinePlannedDay } from "./group-routine-data";
+import { computeWeeklyTargetProgress } from "./group-routine-weekly";
 
 /**
  * Sort order follows the "faire Bewertung" spec exactly: success rate first (so members
@@ -24,17 +25,28 @@ export async function getGroupRoutineLeaderboard(groupRoutineId: string) {
         where: { groupRoutineId, userId: p.userId },
       });
       const completedDates = new Set(completions.map((c) => dateKey(c.date)));
+      const isWeeklyTarget = routine.goalType === "WEEKLY";
 
       let plannedSoFar = 0;
       let completedSoFar = 0;
       const startCursor = toDateOnly(p.joinedAt ?? routine.startDate);
-      for (let d = startCursor; d <= today; d = addDaysUtc(d, 1)) {
-        if (!isGroupRoutinePlannedDay(routine, p, d)) continue;
-        plannedSoFar += 1;
-        if (completedDates.has(dateKey(d))) completedSoFar += 1;
+      if (isWeeklyTarget) {
+        const progress = computeWeeklyTargetProgress(routine, p, completedDates, startCursor, today);
+        plannedSoFar = progress.planned;
+        completedSoFar = progress.completed;
+      } else {
+        for (let d = startCursor; d <= today; d = addDaysUtc(d, 1)) {
+          if (!isGroupRoutinePlannedDay(routine, p, d)) continue;
+          plannedSoFar += 1;
+          if (completedDates.has(dateKey(d))) completedSoFar += 1;
+        }
       }
 
       const rateForWeek = (week: ReturnType<typeof getWeekInfo>) => {
+        if (isWeeklyTarget) {
+          const progress = computeWeeklyTargetProgress(routine, p, completedDates, week.start, week.end);
+          return progress.planned > 0 ? progress.completed / progress.planned : null;
+        }
         let planned = 0;
         let done = 0;
         for (const d of week.days) {

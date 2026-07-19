@@ -67,7 +67,10 @@ export function GroupRoutineLeaderboardPanel({
                     {row.successRate !== null ? `${Math.round(row.successRate * 100)}%` : "–"}
                   </div>
                   <div className="text-[10px] text-[#5b7a91]">
-                    🔥{row.currentStreak} · {row.routineXp} XP
+                    {row.completedDays} Tage · {row.routineXp} XP
+                  </div>
+                  <div className="text-[10px] text-[#5b7a91]">
+                    🔥{row.currentStreak} · Rekord {row.longestStreak}
                   </div>
                 </div>
               </li>

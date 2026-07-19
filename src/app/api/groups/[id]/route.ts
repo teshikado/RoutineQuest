@@ -21,7 +21,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         orderBy: { joinedAt: "asc" },
       },
       invites: { where: { revoked: false }, orderBy: { createdAt: "desc" }, take: 1 },
-      challenges: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!group) return NextResponse.json({ error: "Gruppe nicht gefunden." }, { status: 404 });
@@ -37,7 +36,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     isPrivate: group.isPrivate,
     myRole: membership.role,
     activeInviteCode: group.invites[0]?.code ?? null,
-    challenges: group.challenges,
     members: group.members.map((m) => {
       const progress = getLevelProgress(m.user.totalXp);
       const rank = getRankForLevel(progress.level);

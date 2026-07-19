@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, CalendarClock, PlayCircle, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -23,10 +23,26 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   LEFT: { label: "Verlassen", className: "bg-[#F5F7FA] text-[#5b7a91]" },
 };
 
+function formatShortDateDe(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${d.getUTCFullYear()}`;
+}
+
+function periodProgressLabel(routine: GroupRoutineListItem): string {
+  if (routine.bucket === "upcoming") return `Startet am ${formatShortDateDe(routine.startDate)}`;
+  if (routine.bucket === "ended") {
+    return routine.totalDays !== null ? `Beendet · ${routine.totalDays} Tage insgesamt` : "Beendet";
+  }
+  const dayLabel = routine.totalDays !== null ? `Tag ${routine.dayNumber} von ${routine.totalDays}` : `Tag ${routine.dayNumber}`;
+  if (routine.daysRemaining !== null) return `${dayLabel} · noch ${routine.daysRemaining} Tage`;
+  return dayLabel;
+}
+
 function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem; groupId: string }) {
   const catMeta = CATEGORY_META[routine.category as Category];
   const diffMeta = DIFFICULTY_META[routine.difficulty as Difficulty];
   const statusMeta = routine.myParticipation ? STATUS_LABELS[routine.myParticipation.status] : null;
+  const isWeeklyTarget = routine.goalType === "WEEKLY";
 
   return (
     <Link href={`/groups/${groupId}/routines/${routine.id}`}>
@@ -44,32 +60,40 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
               {catMeta.label} · <span style={{ color: diffMeta.color }}>+{routine.xpReward} XP</span>
             </div>
           </div>
-          {routine.status !== "ACTIVE" && (
+          {routine.status === "PAUSED" && (
             <span className="text-[10px] font-bold text-[#5b7a91] bg-[#F5F7FA] rounded-full px-2 py-0.5 shrink-0">
-              {routine.status === "PAUSED" ? "Pausiert" : "Beendet"}
+              Pausiert
             </span>
           )}
         </div>
 
         {routine.description && <p className="text-sm text-[#5b7a91] line-clamp-2">{routine.description}</p>}
 
-        <div className="flex gap-1">
-          {Object.entries(WEEKDAY_LABELS).map(([day, label]) => (
-            <span
-              key={day}
-              className={clsx(
-                "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
-                routine.scheduledDays.includes(Number(day))
-                  ? "bg-[#4FA8D8] text-white"
-                  : "bg-[#F5F7FA] text-[#c8d6e0]"
-              )}
-            >
-              {label[0]}
-            </span>
-          ))}
-        </div>
+        {isWeeklyTarget ? (
+          <span className="self-start text-[10px] font-bold text-[#4FA8D8] bg-[#EAF7FC] rounded-full px-2 py-1">
+            {routine.goalTarget}× pro Woche (freie Tagwahl)
+          </span>
+        ) : (
+          <div className="flex gap-1">
+            {Object.entries(WEEKDAY_LABELS).map(([day, label]) => (
+              <span
+                key={day}
+                className={clsx(
+                  "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+                  routine.scheduledDays.includes(Number(day))
+                    ? "bg-[#4FA8D8] text-white"
+                    : "bg-[#F5F7FA] text-[#c8d6e0]"
+                )}
+              >
+                {label[0]}
+              </span>
+            ))}
+          </div>
+        )}
 
-        <div className="flex items-center justify-between pt-1 border-t border-[#F5F7FA] mt-1">
+        <div className="text-xs font-semibold text-[#4FA8D8]">{periodProgressLabel(routine)}</div>
+
+        <div className="flex items-center justify-between pt-1 border-t border-[#F5F7FA] mt-1 flex-wrap gap-1.5">
           <span className="flex items-center gap-1 text-xs text-[#5b7a91]">
             <Users className="h-3.5 w-3.5" /> {routine.participantCount}
           </span>
@@ -86,6 +110,41 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
         </div>
       </Card>
     </Link>
+  );
+}
+
+function RoutineSection({
+  title,
+  icon,
+  routines,
+  groupId,
+  emptyHint,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  routines: GroupRoutineListItem[];
+  groupId: string;
+  emptyHint?: string;
+}) {
+  if (routines.length === 0 && !emptyHint) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <h2 className="text-sm font-extrabold text-[#183B56] uppercase tracking-wide">
+          {title} <span className="text-[#9db3c2] font-semibold">({routines.length})</span>
+        </h2>
+      </div>
+      {routines.length === 0 ? (
+        <p className="text-sm text-[#9db3c2] mb-2">{emptyHint}</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {routines.map((routine) => (
+            <GroupRoutineCard key={routine.id} routine={routine} groupId={groupId} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -142,13 +201,21 @@ export function GroupRoutinesListClient({
         status: data.status,
         participantCount: 1,
         myParticipation: { status: "JOINED", joinedAt: new Date().toISOString() },
+        bucket: new Date(data.startDate) > new Date() ? "upcoming" : "active",
+        dayNumber: 1,
+        totalDays: null,
+        daysRemaining: null,
       },
       ...r,
     ]);
   }
 
+  const active = routines.filter((r) => r.bucket === "active");
+  const upcoming = routines.filter((r) => r.bucket === "upcoming");
+  const ended = routines.filter((r) => r.bucket === "ended");
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div
@@ -164,7 +231,7 @@ export function GroupRoutinesListClient({
         </div>
         {isLeader && (
           <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4" /> Neue Gruppenroutine
+            <Plus className="h-4 w-4" /> Gruppenroutine erstellen
           </Button>
         )}
       </div>
@@ -177,20 +244,36 @@ export function GroupRoutinesListClient({
           action={
             isLeader && (
               <Button size="sm" onClick={() => setFormOpen(true)}>
-                <Plus className="h-4 w-4" /> Neue Gruppenroutine
+                <Plus className="h-4 w-4" /> Gruppenroutine erstellen
               </Button>
             )
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {routines.map((routine) => (
-            <GroupRoutineCard key={routine.id} routine={routine} groupId={group.id} />
-          ))}
+        <div className="space-y-8">
+          <RoutineSection
+            title="Aktive Routinen"
+            icon={<PlayCircle className="h-4 w-4 text-[#78D6B0]" />}
+            routines={active}
+            groupId={group.id}
+            emptyHint="Gerade läuft keine Gruppenroutine."
+          />
+          <RoutineSection
+            title="Kommende Routinen"
+            icon={<CalendarClock className="h-4 w-4 text-[#FFD166]" />}
+            routines={upcoming}
+            groupId={group.id}
+          />
+          <RoutineSection
+            title="Beendete Routinen"
+            icon={<CheckCircle2 className="h-4 w-4 text-[#9db3c2]" />}
+            routines={ended}
+            groupId={group.id}
+          />
         </div>
       )}
 
-      <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Neue Gruppenroutine">
+      <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Gruppenroutine erstellen">
         <GroupRoutineForm onSubmit={handleCreate} onCancel={() => setFormOpen(false)} submitLabel="Erstellen" />
       </Modal>
     </div>
