@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { DownloadWindowsCard } from "@/components/download-windows-card";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
       </div>
       <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-7">{children}</div>
+      <DownloadWindowsCard className="mt-6" />
     </div>
   );
 }

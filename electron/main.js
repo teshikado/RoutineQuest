@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, shell, Menu } = require("electron");
 const path = require("path");
 
 // The desktop app is a thin client: it does not run a server or touch a
@@ -11,6 +11,18 @@ const path = require("path");
 // Override for local development: `npm run electron:dev` sets APP_URL to
 // http://localhost:3000 so the wrapper points at your local `next dev` server.
 const APP_URL = process.env.APP_URL || "https://routine-quest-rouge.vercel.app";
+
+// Only one window/instance at a time — a second launch (e.g. double-clicking
+// the desktop shortcut while the app is already running) just focuses the
+// existing window instead of opening a duplicate.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+// No File/Edit/View/Window/Help menu bar — this is a single-purpose kiosk-style
+// client, not a browser, so a menu bar would only be visual noise.
+Menu.setApplicationMenu(null);
 
 let mainWindow;
 
@@ -26,6 +38,7 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
+      nodeIntegration: false,
       sandbox: true,
     },
   });
@@ -38,6 +51,16 @@ function createWindow() {
       return { action: "deny" };
     }
     return { action: "allow" };
+  });
+
+  // Same-window navigations (e.g. a plain <a href> to an external site)
+  // are redirected to the system browser too, so the app window always
+  // stays on the RoutineQuest domain.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith(APP_URL)) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
   });
 
   mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
@@ -64,12 +87,20 @@ function createWindow() {
   });
 }
 
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
 
   if (app.isPackaged) {
-    // Auto-update check; no-op until electron-builder `publish` is configured
-    // against a real GitHub repo with published releases (see README).
+    // Checks the GitHub Releases of this repo (see build.publish in
+    // package.json) for a newer version, downloads it in the background,
+    // and installs it on the next app restart.
     const { autoUpdater } = require("electron-updater");
     autoUpdater.checkForUpdatesAndNotify().catch(() => {
       // Silently ignore — e.g. no releases published yet, or offline.

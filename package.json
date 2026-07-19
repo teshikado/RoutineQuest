@@ -61,6 +61,7 @@
     "appId": "app.routinequest.desktop",
     "productName": "RoutineQuest",
     "asar": true,
+    "artifactName": "RoutineQuest-Setup.exe",
     "directories": {
       "app": "electron",
       "output": "dist",

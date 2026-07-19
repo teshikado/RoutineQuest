@@ -7,6 +7,32 @@ Gruppenroutinen mit Rangliste, wöchentlichem Champion und Statistiken).
 Next.js (App Router) + TypeScript, Prisma/PostgreSQL, Auth.js (Credentials),
 Tailwind CSS, Recharts — als Website **und** als Windows-Desktop-App.
 
+## 📥 RoutineQuest für Windows herunterladen
+
+**[RoutineQuest-Setup.exe herunterladen](https://github.com/teshikado/RoutineQuest/releases/latest/download/RoutineQuest-Setup.exe)**
+(Windows 10 / 11, immer die neueste Version)
+
+So installierst du es:
+
+1. Datei über den Link oben herunterladen.
+2. `RoutineQuest-Setup.exe` doppelklicken und dem Installationsassistenten
+   folgen (Installationsverzeichnis, Desktop-Verknüpfung).
+3. RoutineQuest über das Startmenü oder die Desktop-Verknüpfung öffnen.
+
+Die Desktop-App speichert keine eigenen Daten lokal — sie öffnet beim Start
+die gehostete Web-App in einem nativen Fenster, es wird also eine
+Internetverbindung benötigt (genau wie bei der Website).
+
+Da der Installer (noch) nicht digital signiert ist, zeigt Windows
+SmartScreen beim ersten Start möglicherweise die Warnung
+**"Windows hat den Computer geschützt" / "Unbekannter Herausgeber"** — das ist
+normal für unsignierte Installer, siehe Abschnitt
+[Code-Signing](#code-signing-optional-aber-empfohlen) unten. Lade die Datei
+ausschließlich über diesen offiziellen Link bzw. die
+[GitHub-Releases-Seite](https://github.com/teshikado/RoutineQuest/releases)
+dieses Repositorys herunter — nicht über den grünen "Code"-Button (der lädt
+nur den Quellcode, kein installierbares Programm).
+
 ## Architektur
 
 RoutineQuest besteht aus zwei Teilen, die unabhängig voneinander laufen:
@@ -102,10 +128,19 @@ unterstützt und kostenlos für dieses Projektvolumen reicht.
 npm run dist:win
 ```
 
-Erzeugt `dist/RoutineQuest Setup <version>.exe` — einen NSIS-Installer mit
-wählbarem Installationsverzeichnis, Desktop- und Startmenü-Verknüpfung.
-Da der Client jetzt nur die gehostete Seite lädt, ist der Installer sehr
-klein (kein gebündelter Next.js-Server, kein Prisma).
+Erzeugt `dist/RoutineQuest-Setup.exe` — einen NSIS-Installer mit wählbarem
+Installationsverzeichnis, Desktop- und Startmenü-Verknüpfung. Der Dateiname
+ist bewusst **ohne Versionsnummer** fest codiert (`artifactName` in
+`package.json`), damit der dauerhafte Link
+`.../releases/latest/download/RoutineQuest-Setup.exe` bei jeder neuen Version
+funktioniert, ohne dass Nutzer die Releases-Seite durchsuchen müssen. Da der
+Client jetzt nur die gehostete Seite lädt, ist der Installer sehr klein (kein
+gebündelter Next.js-Server, kein Prisma).
+
+Der Installer enthält ausschließlich das gebündelte Electron-Programm (als
+`asar`-Archiv) — Endnutzer sehen nach der Installation keine losen
+JavaScript-, `package.json`- oder `node_modules`-Dateien, sondern nur das
+fertige RoutineQuest-Programm.
 
 Das App-Icon (`build/icon.ico`, `electron/icon.ico`) ist bereits erzeugt und
 eingecheckt. Bei Bedarf neu generieren (z. B. nach Änderung der Marke):
@@ -133,33 +168,36 @@ Tests/kleine Nutzergruppen ist das nicht zwingend nötig.
 ## Automatische Releases (GitHub Actions)
 
 `.github/workflows/release.yml` baut bei jedem gepushten Tag `v*` den
-Windows-Installer und veröffentlicht ihn automatisch als GitHub Release
-(inkl. `latest.yml`, das `electron-updater` für Auto-Updates braucht).
+Windows-Installer und veröffentlicht ihn automatisch (nicht als Entwurf) als
+GitHub Release unter `RoutineQuest-Setup.exe` — inkl. `latest.yml` und
+`.blockmap`, die `electron-updater` für Auto-Updates braucht. `owner`/`repo`
+in `package.json` unter `"build"."publish"` sind bereits auf dieses
+Repository (`teshikado/RoutineQuest`) eingestellt, hier ist nichts mehr zu
+tun.
 
-**Einmalig vor dem ersten Release nötig:**
+**Eine neue Version veröffentlichen:**
 
-In `package.json` unter `"build"."publish"` die Platzhalter durch den
-echten GitHub-Owner/Repo-Namen ersetzen:
-
-```json
-"publish": {
-  "provider": "github",
-  "owner": "DEIN_GITHUB_NAME",
-  "repo": "RoutineQuest"
-}
-```
-
-**Release veröffentlichen:**
-
-```powershell
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-GitHub Actions baut daraufhin automatisch `dist/RoutineQuest Setup 1.0.0.exe`
-und hängt es an ein neues GitHub Release unter dem Tag `v1.0.0` an. Kein
-zusätzliches Secret nötig — der Workflow nutzt das von GitHub automatisch
-bereitgestellte `GITHUB_TOKEN`.
+1. Änderungen wie gewohnt committen und zu `main` pushen.
+2. Versionsnummer erhöhen (in `package.json` **und** `electron/package.json`,
+   z. B. `1.0.0` → `1.0.1`).
+3. Tag erstellen und pushen:
+   ```powershell
+   git add package.json electron/package.json
+   git commit -m "Version 1.0.1"
+   git push
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+4. GitHub Actions baut daraufhin automatisch `RoutineQuest-Setup.exe` neu und
+   veröffentlicht es unter einem neuen GitHub Release (Tag `v1.0.1`). Kein
+   zusätzliches Secret nötig — der Workflow nutzt das von GitHub automatisch
+   bereitgestellte `GITHUB_TOKEN`.
+5. Bereits installierte RoutineQuest-Apps finden das Update automatisch beim
+   nächsten Start (`electron-updater`, siehe unten) — Nutzer müssen nichts
+   selbst herunterladen.
+6. Der Download-Link `.../releases/latest/download/RoutineQuest-Setup.exe`
+   (auf der Website und in diesem README) zeigt automatisch immer auf die
+   neueste Version, ohne dass er irgendwo angepasst werden muss.
 
 `.github/workflows/ci.yml` läuft zusätzlich bei jedem Push/PR auf `main` und
 prüft Lint, TypeScript und den Next.js-Produktionsbuild — unabhängig vom
