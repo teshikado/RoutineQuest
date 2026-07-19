@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f7fa;
+  --foreground: #183b56;
+
+  --color-baby-blue: #a7d8f0;
+  --color-ice-blue: #eaf7fc;
+  --color-button-blue: #4fa8d8;
+  --color-heading-blue: #183b56;
+  --color-white: #ffffff;
+  --color-gray-light: #f5f7fa;
+  --color-mint: #78d6b0;
+  --color-xp-yellow: #ffd166;
+  --color-coral: #ff8a80;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-babyblue: var(--color-baby-blue);
+  --color-iceblue: var(--color-ice-blue);
+  --color-buttonblue: var(--color-button-blue);
+  --color-headingblue: var(--color-heading-blue);
+  --color-graylight: var(--color-gray-light);
+  --color-mint: var(--color-mint);
+  --color-xpyellow: var(--color-xp-yellow);
+  --color-coral: var(--color-coral);
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-manrope);
+}
+
+body {
+  background: linear-gradient(180deg, var(--color-ice-blue) 0%, var(--color-gray-light) 320px);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
+  color: var(--color-heading-blue);
+}
+
+::selection {
+  background: var(--color-baby-blue);
+  color: var(--color-heading-blue);
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop-in {
+  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+.animate-float-up {
+  animation: float-up 1s ease-out forwards;
+}
+
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50% { transform: scale(1.08) rotate(1deg); }
+}
+.animate-flame {
+  animation: flame-flicker 1.6s ease-in-out infinite;
+}
+
+/* Scrollbar styling for a cleaner, on-brand look */
+* {
+  scrollbar-color: var(--color-baby-blue) transparent;
+}

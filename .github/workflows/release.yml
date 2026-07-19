@@ -1,0 +1,41 @@
+name: Release Windows Installer
+
+# Builds RoutineQuest-Setup-<version>.exe and publishes it (plus the
+# electron-updater metadata file, latest.yml) to the GitHub Release matching
+# the pushed tag. Push a tag like `v1.0.0` to trigger it:
+#
+#   git tag v1.0.0
+#   git push origin v1.0.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install desktop-app dependencies
+        working-directory: electron
+        run: npm ci
+
+      - name: Build and publish Windows installer
+        run: npm run release:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

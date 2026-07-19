@@ -1,0 +1,11 @@
+{
+  "name": "routinequest-desktop",
+  "version": "1.0.0",
+  "description": "RoutineQuest desktop client — a thin wrapper that opens the hosted RoutineQuest web app in a native window.",
+  "author": "RoutineQuest",
+  "private": true,
+  "main": "main.js",
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  }
+}

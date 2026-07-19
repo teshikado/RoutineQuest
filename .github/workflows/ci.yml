@@ -1,0 +1,42 @@
+name: CI
+
+# Validates that the web app still lints, type-checks and builds cleanly on
+# every push/PR — independent of the Windows installer release workflow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build (Next.js production build)
+        run: npm run build
+        env:
+          # Dummy values so `next build` can complete without a real
+          # database/secret — no page in this app queries the database at
+          # build time, so these are never actually used.
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/ci"
+          AUTH_SECRET: "ci-build-placeholder-secret"
+          NEXTAUTH_URL: "http://localhost:3000"
