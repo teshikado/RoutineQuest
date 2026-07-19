@@ -119,13 +119,23 @@ async function reconcilePerfectWeek(tx: TxClient, userId: string, date: Date) {
   const week = getWeekInfo(date);
   const today = todayDateOnly();
 
+  const key = { userId_reason_refDate_refId: { userId, reason: "PERFECT_WEEK", refDate: week.start, refId: week.weekKey } };
+  const existing = await tx.xpTransaction.findUnique({ where: key });
+
+  // A "perfect week" only makes sense once the account existed for the entire week —
+  // otherwise days before signup (which trivially have "0 scheduled / 0 done") would
+  // count as satisfied for free, letting a brand-new account earn the full-week bonus
+  // off a single day of activity.
+  const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { createdAt: true } });
+  if (toDateOnly(user.createdAt) > week.start) {
+    if (existing) await tx.xpTransaction.delete({ where: { id: existing.id } });
+    return;
+  }
+
   const remainingScheduledAfterToday = await Promise.all(
     week.days.filter((d) => isFutureDay(d)).map((d) => getScheduledRoutines(tx, userId, d))
   );
   const weekUnresolved = remainingScheduledAfterToday.some((r) => r.length > 0);
-
-  const key = { userId_reason_refDate_refId: { userId, reason: "PERFECT_WEEK", refDate: week.start, refId: week.weekKey } };
-  const existing = await tx.xpTransaction.findUnique({ where: key });
 
   if (weekUnresolved) {
     if (existing) await tx.xpTransaction.delete({ where: { id: existing.id } });
