@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Electron client is a separate, plain Node.js (CommonJS) project —
+    // not part of the Next.js/TypeScript/ESM web app, so it's out of scope
+    // for these lint rules.
+    "electron/**",
+    "dist/**",
   ]),
 ]);
 
