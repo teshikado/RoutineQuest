@@ -1,7 +1,7 @@
 import type { Prisma, Routine } from "@prisma/client";
 import { prisma } from "./prisma";
 import { DIFFICULTY_META, STREAK_MIN_RATIO, XP_BONUS } from "./constants";
-import { addDaysUtc, dateKey, getWeekInfo, isFutureDay, isoWeekday, todayDateOnly } from "./dates";
+import { addDaysUtc, dateKey, getWeekInfo, isFutureDay, isoWeekday, todayDateOnly, toDateOnly } from "./dates";
 import { getLevelProgress, getRankForLevel } from "./xp";
 import { notify } from "./notifications";
 
@@ -58,10 +58,18 @@ async function dayDoneRatio(tx: TxClient, userId: string, date: Date): Promise<{
   return { scheduled: scheduled.length, done };
 }
 
-/** Recomputes current + longest streak by walking backward from today. Days with no scheduled tasks are skipped and never break the streak. */
+/**
+ * Recomputes current + longest streak by walking backward from today. Days with no
+ * scheduled tasks are skipped and never break the streak. The walk stops at the account's
+ * creation date — there's no meaningful history before that, and without this bound the
+ * loop would run the full STREAK_LOOKBACK_DAYS (each iteration a DB round trip) for any
+ * account that doesn't have a routine scheduled on every single day since signup, which
+ * for newer accounts routinely overran the interactive transaction's timeout.
+ */
 async function recomputeStreak(tx: TxClient, userId: string): Promise<number> {
   const today = todayDateOnly();
-  let cursor = today;
+  const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+  const accountCreatedDay = toDateOnly(user.createdAt);
   let current = 0;
 
   // Today only counts once it already meets the threshold; otherwise it's "pending", not a break.
@@ -70,9 +78,9 @@ async function recomputeStreak(tx: TxClient, userId: string): Promise<number> {
   if (todayQualifies) {
     current += 1;
   }
-  cursor = addDaysUtc(today, -1);
 
-  for (let i = 0; i < STREAK_LOOKBACK_DAYS; i++) {
+  let cursor = addDaysUtc(today, -1);
+  for (let i = 0; i < STREAK_LOOKBACK_DAYS && cursor >= accountCreatedDay; i++) {
     const stats = await dayDoneRatio(tx, userId, cursor);
     if (stats.scheduled === 0) {
       cursor = addDaysUtc(cursor, -1);
@@ -87,7 +95,6 @@ async function recomputeStreak(tx: TxClient, userId: string): Promise<number> {
     }
   }
 
-  const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
   const longest = Math.max(user.longestStreak, current);
   await tx.user.update({ where: { id: userId }, data: { currentStreak: current, longestStreak: longest } });
   return current;
