@@ -88,14 +88,16 @@ jobs:
       - name: "Build macOS installer (universal: Apple Silicon + Intel)"
         run: npm run dist:mac
         env:
-          # All empty/unset unless the repo owner has added them under
-          # Settings → Secrets and variables → Actions. Without them,
-          # electron-builder produces an unsigned, non-notarized build (Apple
-          # Silicon still gets electron-builder's automatic ad-hoc signature,
-          # which is required by macOS to run at all — that's not the same
-          # as a real Developer ID signature, and Gatekeeper will still warn
-          # on first launch). See README.md "macOS: Code-Signing &
-          # Notarisierung" for what each secret is and how to obtain it.
+          # CSC_LINK/APPLE_* are all empty/unset unless the repo owner has
+          # added them under Settings → Secrets and variables → Actions —
+          # see README.md "macOS: Code-Signing & Notarisierung" for what each
+          # one is. Without CSC_LINK, CSC_IDENTITY_AUTO_DISCOVERY=false stops
+          # electron-builder from searching the (empty, on a fresh CI runner)
+          # local keychain for a signing identity, which otherwise fails the
+          # build outright rather than falling back to an unsigned app —
+          # unsigned is what we actually want here. When CSC_LINK *is* set,
+          # that explicit identity is used regardless of this flag.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
