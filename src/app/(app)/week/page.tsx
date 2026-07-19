@@ -10,10 +10,10 @@ import { DynamicIcon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_CONFIG: Record<DayStatus, { icon: React.ReactNode; className: string; label: string }> = {
-  done: { icon: <Check className="h-4 w-4" />, className: "bg-[#78D6B0] text-white", label: "Erledigt" },
-  open: { icon: <Circle className="h-3.5 w-3.5" />, className: "bg-white border-2 border-[#A7D8F0] text-[#A7D8F0]", label: "Offen" },
-  missed: { icon: <X className="h-4 w-4" />, className: "bg-[#FFE0DC] text-[#e2564c]", label: "Verpasst" },
-  not_scheduled: { icon: <Minus className="h-3.5 w-3.5" />, className: "bg-[#F5F7FA] text-[#c8d6e0]", label: "Nicht geplant" },
+  done: { icon: <Check className="h-4 w-4" />, className: "bg-[#34D399] text-white", label: "Erledigt" },
+  open: { icon: <Circle className="h-3.5 w-3.5" />, className: "bg-[#111118] border-2 border-[#D8B4FE] text-[#D8B4FE]", label: "Offen" },
+  missed: { icon: <X className="h-4 w-4" />, className: "bg-[#3B1420] text-[#FB7185]", label: "Verpasst" },
+  not_scheduled: { icon: <Minus className="h-3.5 w-3.5" />, className: "bg-[#171720] text-[#5F5B68]", label: "Nicht geplant" },
 };
 
 export default async function WeekPage({
@@ -34,26 +34,26 @@ export default async function WeekPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#183B56]">Wochenplan</h1>
-          <p className="text-[#5b7a91] mt-1">{weekLabel(week)}</p>
+          <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Wochenplan</h1>
+          <p className="text-[#C8C5D2] mt-1">{weekLabel(week)}</p>
         </div>
         <div className="flex gap-2">
           <Link
             href={`/week?offset=${offset - 1}`}
-            className="h-10 w-10 rounded-xl bg-white border border-[#EAF7FC] flex items-center justify-center text-[#5b7a91] hover:text-[#4FA8D8] hover:bg-[#EAF7FC]"
+            className="h-10 w-10 rounded-xl bg-[#111118] border border-[#292936] flex items-center justify-center text-[#C8C5D2] hover:text-[#A855F7] hover:bg-[#171720]"
             aria-label="Vorherige Woche"
           >
             <ChevronLeft className="h-5 w-5" />
           </Link>
           <Link
             href="/week"
-            className="h-10 px-4 rounded-xl bg-white border border-[#EAF7FC] flex items-center justify-center text-sm font-semibold text-[#5b7a91] hover:text-[#4FA8D8] hover:bg-[#EAF7FC]"
+            className="h-10 px-4 rounded-xl bg-[#111118] border border-[#292936] flex items-center justify-center text-sm font-semibold text-[#C8C5D2] hover:text-[#A855F7] hover:bg-[#171720]"
           >
             Heute
           </Link>
           <Link
             href={`/week?offset=${offset + 1}`}
-            className="h-10 w-10 rounded-xl bg-white border border-[#EAF7FC] flex items-center justify-center text-[#5b7a91] hover:text-[#4FA8D8] hover:bg-[#EAF7FC]"
+            className="h-10 w-10 rounded-xl bg-[#111118] border border-[#292936] flex items-center justify-center text-[#C8C5D2] hover:text-[#A855F7] hover:bg-[#171720]"
             aria-label="Nächste Woche"
           >
             <ChevronRight className="h-5 w-5" />
@@ -61,7 +61,7 @@ export default async function WeekPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-[#5b7a91]">
+      <div className="flex flex-wrap gap-3 text-xs text-[#C8C5D2]">
         {(Object.entries(STATUS_CONFIG) as [DayStatus, (typeof STATUS_CONFIG)[DayStatus]][]).map(([key, cfg]) => (
           <div key={key} className="flex items-center gap-1.5">
             <span className={`h-5 w-5 rounded-full flex items-center justify-center ${cfg.className}`}>
@@ -83,28 +83,28 @@ export default async function WeekPage({
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr>
-                <th className="text-left text-xs font-semibold text-[#5b7a91] pb-3 pr-3 sticky left-0 bg-white">
+                <th className="text-left text-xs font-semibold text-[#C8C5D2] pb-3 pr-3 sticky left-0 bg-[#111118]">
                   Routine
                 </th>
                 {week.days.map((day, i) => (
                   <th
                     key={dateKey(day)}
                     className={`text-center text-xs font-semibold pb-3 px-1 ${
-                      dateKey(day) === todayKey ? "text-[#4FA8D8]" : "text-[#5b7a91]"
+                      dateKey(day) === todayKey ? "text-[#A855F7]" : "text-[#C8C5D2]"
                     }`}
                   >
                     {WEEKDAY_LABELS[i + 1]}
                     <div className="text-[10px] font-normal">{day.getUTCDate()}.</div>
                   </th>
                 ))}
-                <th className="text-center text-xs font-semibold text-[#5b7a91] pb-3 pl-3">Quote</th>
-                <th className="text-center text-xs font-semibold text-[#5b7a91] pb-3 pl-3">XP</th>
+                <th className="text-center text-xs font-semibold text-[#C8C5D2] pb-3 pl-3">Quote</th>
+                <th className="text-center text-xs font-semibold text-[#C8C5D2] pb-3 pl-3">XP</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-[#F5F7FA]">
-                  <td className="py-3 pr-3 sticky left-0 bg-white">
+                <tr key={row.id} className="border-t border-[#171720]">
+                  <td className="py-3 pr-3 sticky left-0 bg-[#111118]">
                     <div className="flex items-center gap-2 min-w-[140px]">
                       <div
                         className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
@@ -112,7 +112,7 @@ export default async function WeekPage({
                       >
                         <DynamicIcon name={row.icon} className="h-3.5 w-3.5" style={{ color: row.color }} />
                       </div>
-                      <span className="text-sm font-semibold text-[#183B56] truncate">{row.title}</span>
+                      <span className="text-sm font-semibold text-[#F8F7FC] truncate">{row.title}</span>
                       {row.groupBadge && (
                         <span
                           className="flex items-center gap-1 text-[10px] font-bold rounded-full px-1.5 py-0.5 shrink-0"
@@ -137,10 +137,10 @@ export default async function WeekPage({
                       </td>
                     );
                   })}
-                  <td className="text-center pl-3 text-sm font-bold text-[#183B56]">
+                  <td className="text-center pl-3 text-sm font-bold text-[#F8F7FC]">
                     {row.successRate === null ? "–" : `${Math.round(row.successRate * 100)}%`}
                   </td>
-                  <td className="text-center pl-3 text-sm font-bold text-[#FFD166]">{row.xpCollected}</td>
+                  <td className="text-center pl-3 text-sm font-bold text-[#FACC15]">{row.xpCollected}</td>
                 </tr>
               ))}
             </tbody>

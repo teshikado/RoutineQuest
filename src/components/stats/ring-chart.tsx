@@ -2,9 +2,9 @@
 
 import { useId, useState } from "react";
 
-const MINT_FROM = "#5fc79c";
-const MINT_TO = "#3FAE7F";
-const TRACK = "#EAF7FC";
+const MINT_FROM = "#10B981";
+const MINT_TO = "#34D399";
+const TRACK = "#292936";
 
 export function RingChart({
   label,
@@ -53,15 +53,15 @@ export function RingChart({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center flex-col">
-          <span className="text-xl font-extrabold text-[#183B56] tabular-nums">{Math.round(pct * 100)}%</span>
+          <span className="text-xl font-extrabold text-[#F8F7FC] tabular-nums">{Math.round(pct * 100)}%</span>
         </div>
         {hover && (
-          <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#183B56] text-white text-xs px-2.5 py-1.5 shadow-[var(--shadow-md)] z-10">
+          <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#1D1D28] text-white text-xs px-2.5 py-1.5 shadow-[var(--shadow-md)] z-10">
             {detail}
           </div>
         )}
       </div>
-      <span className="text-sm font-semibold text-[#5b7a91]">{label}</span>
+      <span className="text-sm font-semibold text-[#C8C5D2]">{label}</span>
     </div>
   );
 }

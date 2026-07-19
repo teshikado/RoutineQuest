@@ -37,17 +37,17 @@ export function LevelUpModal({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.3 }}
-          className="text-2xl font-extrabold text-[#183B56] mb-1"
+          className="text-2xl font-extrabold text-[#F8F7FC] mb-1"
         >
           Level Up!
         </motion.h2>
-        <p className="text-[#5b7a91] mb-1">Du bist jetzt Level {level}.</p>
+        <p className="text-[#C8C5D2] mb-1">Du bist jetzt Level {level}.</p>
         {rankedUp && (
           <p className="font-bold mb-4" style={{ color: rank.color }}>
             Neuer Rang: {rank.name}
           </p>
         )}
-        {rankedUp && <p className="text-sm text-[#5b7a91] mb-4">{rank.description}</p>}
+        {rankedUp && <p className="text-sm text-[#C8C5D2] mb-4">{rank.description}</p>}
         <Button onClick={onClose} className="mt-2">
           Weiter geht&apos;s
         </Button>

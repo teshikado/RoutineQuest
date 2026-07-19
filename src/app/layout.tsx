@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -9,6 +9,10 @@ const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "RoutineQuest",
   description: "Routine aufbauen. XP sammeln. Gemeinsam aufsteigen.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#050507",
 };
 
 export default function RootLayout({

@@ -33,14 +33,22 @@ function createWindow() {
     minWidth: 420,
     minHeight: 600,
     title: "RoutineQuest",
-    backgroundColor: "#EAF7FC",
+    backgroundColor: "#050507",
     icon: path.join(__dirname, "icon.ico"),
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  // Keep the window hidden (behind the dark backgroundColor above, so no
+  // white flash either way) until the page has actually painted something —
+  // avoids a blank frame between process start and first content.
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   // Links that would open a new window (e.g. mailto:, external references)

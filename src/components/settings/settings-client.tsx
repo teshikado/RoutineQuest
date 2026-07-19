@@ -38,12 +38,12 @@ function NotificationSettings() {
   }
 
   return (
-    <ul className="divide-y divide-[#F5F7FA]">
+    <ul className="divide-y divide-[#171720]">
       {settings.map((s) => (
         <li key={s.type} className="flex items-center justify-between py-3 gap-4">
           <div>
-            <div className="text-sm font-semibold text-[#183B56]">{s.label}</div>
-            <div className="text-xs text-[#5b7a91]">{s.description}</div>
+            <div className="text-sm font-semibold text-[#F8F7FC]">{s.label}</div>
+            <div className="text-xs text-[#C8C5D2]">{s.description}</div>
           </div>
           <button
             role="switch"
@@ -51,7 +51,7 @@ function NotificationSettings() {
             aria-label={s.label}
             onClick={() => toggle(s.type, !s.enabled)}
             className={`relative h-6 w-11 rounded-full shrink-0 transition-colors ${
-              s.enabled ? "bg-[#4FA8D8]" : "bg-[#dbeaf3]"
+              s.enabled ? "bg-[#A855F7]" : "bg-[#292936]"
             }`}
           >
             <span
@@ -148,8 +148,8 @@ export function SettingsClient() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-extrabold text-[#183B56]">Einstellungen</h1>
-        <p className="text-[#5b7a91] mt-1">Verwalte dein Konto und deine Benachrichtigungen.</p>
+        <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Einstellungen</h1>
+        <p className="text-[#C8C5D2] mt-1">Verwalte dein Konto und deine Benachrichtigungen.</p>
       </div>
 
       <Card>

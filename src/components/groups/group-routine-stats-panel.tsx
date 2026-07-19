@@ -11,7 +11,7 @@ import type { GroupRoutineStats, GroupRoutinePeriod } from "@/lib/group-routine-
 function BarTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg bg-[#183B56] text-white text-xs px-3 py-2 shadow-lg">
+    <div className="rounded-lg bg-[#1D1D28] text-white text-xs px-3 py-2 shadow-lg">
       <div className="font-semibold">{label}</div>
       <div>{payload[0].value} erledigt</div>
     </div>
@@ -21,7 +21,7 @@ function BarTooltip({ active, payload, label }: { active?: boolean; payload?: { 
 function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg bg-[#183B56] text-white text-xs px-3 py-2 shadow-lg">
+    <div className="rounded-lg bg-[#1D1D28] text-white text-xs px-3 py-2 shadow-lg">
       <div className="font-semibold">{label}</div>
       <div>{payload[0].value}% Erfolgsquote</div>
     </div>
@@ -60,7 +60,7 @@ export function GroupRoutineStatsPanel({
           <button
             onClick={() => setPeriod("week")}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-              period === "week" ? "bg-[#4FA8D8] text-white" : "bg-[#F5F7FA] text-[#5b7a91]"
+              period === "week" ? "bg-[#A855F7] text-white" : "bg-[#171720] text-[#C8C5D2]"
             }`}
           >
             Woche
@@ -68,7 +68,7 @@ export function GroupRoutineStatsPanel({
           <button
             onClick={() => setPeriod("month")}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-              period === "month" ? "bg-[#4FA8D8] text-white" : "bg-[#F5F7FA] text-[#5b7a91]"
+              period === "month" ? "bg-[#A855F7] text-white" : "bg-[#171720] text-[#C8C5D2]"
             }`}
           >
             Monat
@@ -89,55 +89,55 @@ export function GroupRoutineStatsPanel({
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl bg-[#F5F7FA] p-3 text-center">
-              <div className="text-xl font-extrabold text-[#183B56]">{stats.participantCount}</div>
-              <div className="text-xs text-[#5b7a91]">Teilnehmende</div>
+            <div className="rounded-xl bg-[#171720] p-3 text-center">
+              <div className="text-xl font-extrabold text-[#F8F7FC]">{stats.participantCount}</div>
+              <div className="text-xs text-[#C8C5D2]">Teilnehmende</div>
             </div>
-            <div className="rounded-xl bg-[#F5F7FA] p-3 text-center">
-              <div className="text-xl font-extrabold text-[#183B56]">{stats.totalCompletions}</div>
-              <div className="text-xs text-[#5b7a91]">Erledigungen ({periodLabel})</div>
+            <div className="rounded-xl bg-[#171720] p-3 text-center">
+              <div className="text-xl font-extrabold text-[#F8F7FC]">{stats.totalCompletions}</div>
+              <div className="text-xs text-[#C8C5D2]">Erledigungen ({periodLabel})</div>
             </div>
-            <div className="rounded-xl bg-[#F5F7FA] p-3 text-center">
-              <div className="text-xl font-extrabold text-[#183B56]">
+            <div className="rounded-xl bg-[#171720] p-3 text-center">
+              <div className="text-xl font-extrabold text-[#F8F7FC]">
                 {stats.avgSuccessRate !== null ? `${Math.round(stats.avgSuccessRate * 100)}%` : "–"}
               </div>
-              <div className="text-xs text-[#5b7a91]">Ø Erfolgsquote</div>
+              <div className="text-xs text-[#C8C5D2]">Ø Erfolgsquote</div>
             </div>
-            <div className="rounded-xl bg-[#F5F7FA] p-3 text-center">
+            <div className="rounded-xl bg-[#171720] p-3 text-center">
               <div
                 className="text-xl font-extrabold"
-                style={{ color: (stats.groupImprovementPct ?? 0) >= 0 ? "#78D6B0" : "#FF8A80" }}
+                style={{ color: (stats.groupImprovementPct ?? 0) >= 0 ? "#34D399" : "#FB7185" }}
               >
                 {stats.groupImprovementPct !== null
                   ? `${stats.groupImprovementPct > 0 ? "+" : ""}${stats.groupImprovementPct}%`
                   : "–"}
               </div>
-              <div className="text-xs text-[#5b7a91]">Ggü. Vorwoche</div>
+              <div className="text-xs text-[#C8C5D2]">Ggü. Vorwoche</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             {stats.mostCompletions && (
-              <div className="rounded-xl border border-[#EAF7FC] p-3">
-                <div className="text-xs text-[#5b7a91]">Meiste Erledigungen</div>
-                <div className="font-bold text-[#183B56]">
+              <div className="rounded-xl border border-[#292936] p-3">
+                <div className="text-xs text-[#C8C5D2]">Meiste Erledigungen</div>
+                <div className="font-bold text-[#F8F7FC]">
                   {stats.mostCompletions.username} · {stats.mostCompletions.completions}x
                 </div>
               </div>
             )}
             {stats.highestRate && (
-              <div className="rounded-xl border border-[#EAF7FC] p-3">
-                <div className="text-xs text-[#5b7a91]">Höchste Erfolgsquote</div>
-                <div className="font-bold text-[#183B56]">
+              <div className="rounded-xl border border-[#292936] p-3">
+                <div className="text-xs text-[#C8C5D2]">Höchste Erfolgsquote</div>
+                <div className="font-bold text-[#F8F7FC]">
                   {stats.highestRate.username} ·{" "}
                   {stats.highestRate.successRate !== null ? Math.round(stats.highestRate.successRate * 100) : 0}%
                 </div>
               </div>
             )}
             {stats.longestStreakMember && (
-              <div className="rounded-xl border border-[#EAF7FC] p-3">
-                <div className="text-xs text-[#5b7a91]">Längste Erfolgsserie</div>
-                <div className="font-bold text-[#183B56]">
+              <div className="rounded-xl border border-[#292936] p-3">
+                <div className="text-xs text-[#C8C5D2]">Längste Erfolgsserie</div>
+                <div className="font-bold text-[#F8F7FC]">
                   {stats.longestStreakMember.username} · {stats.longestStreakMember.streak} Tage
                 </div>
               </div>
@@ -146,25 +146,25 @@ export function GroupRoutineStatsPanel({
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <div className="text-sm font-semibold text-[#183B56] mb-2">Erledigte Tage pro Mitglied</div>
+              <div className="text-sm font-semibold text-[#F8F7FC] mb-2">Erledigte Tage pro Mitglied</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={stats.members} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#EAF7FC" />
+                  <CartesianGrid vertical={false} stroke="#292936" />
                   <XAxis
                     dataKey="username"
-                    tick={{ fontSize: 11, fill: "#9db3c2" }}
+                    tick={{ fontSize: 11, fill: "#8D8998" }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <YAxis tick={{ fontSize: 11, fill: "#9db3c2" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: "#EAF7FC" }} />
-                  <Bar dataKey="completions" fill="#4FA8D8" radius={[6, 6, 0, 0]} />
+                  <YAxis tick={{ fontSize: 11, fill: "#8D8998" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<BarTooltip />} cursor={{ fill: "#292936" }} />
+                  <Bar dataKey="completions" fill="#A855F7" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="flex flex-col items-center justify-center">
-              <div className="text-sm font-semibold text-[#183B56] mb-2 self-start">Ø Gruppenleistung</div>
+              <div className="text-sm font-semibold text-[#F8F7FC] mb-2 self-start">Ø Gruppenleistung</div>
               <RingChart
                 label="Erfolgsquote"
                 ratio={stats.avgSuccessRate ?? 0}
@@ -174,22 +174,22 @@ export function GroupRoutineStatsPanel({
           </div>
 
           <div>
-            <div className="text-sm font-semibold text-[#183B56] mb-2">Verlauf der Routine</div>
+            <div className="text-sm font-semibold text-[#F8F7FC] mb-2">Verlauf der Routine</div>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart
                 data={stats.trend.map((t) => ({ label: t.label, rate: t.successRate !== null ? Math.round(t.successRate * 100) : 0 }))}
                 margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
               >
-                <CartesianGrid vertical={false} stroke="#EAF7FC" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9db3c2" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#9db3c2" }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                <Tooltip content={<TrendTooltip />} cursor={{ stroke: "#EAF7FC", strokeWidth: 2 }} />
+                <CartesianGrid vertical={false} stroke="#292936" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#8D8998" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#8D8998" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                <Tooltip content={<TrendTooltip />} cursor={{ stroke: "#292936", strokeWidth: 2 }} />
                 <Line
                   type="monotone"
                   dataKey="rate"
-                  stroke="#78D6B0"
+                  stroke="#34D399"
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "#78D6B0", strokeWidth: 0 }}
+                  dot={{ r: 4, fill: "#34D399", strokeWidth: 0 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -197,7 +197,7 @@ export function GroupRoutineStatsPanel({
           </div>
 
           <div>
-            <div className="text-sm font-semibold text-[#183B56] mb-2">Gruppenaktivität</div>
+            <div className="text-sm font-semibold text-[#F8F7FC] mb-2">Gruppenaktivität</div>
             <ActivityHeatmap data={stats.heatmap} />
           </div>
         </div>

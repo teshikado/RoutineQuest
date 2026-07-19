@@ -35,10 +35,10 @@ import type { GroupRoutineDetail } from "@/lib/group-routine-data";
 import type { Category, Difficulty, GroupRoutineAwardType } from "@prisma/client";
 
 const DAY_STATUS_CONFIG = {
-  done: { icon: <Check className="h-4 w-4" />, className: "bg-[#78D6B0] text-white", label: "Erledigt" },
-  open: { icon: <Circle className="h-3.5 w-3.5" />, className: "bg-white border-2 border-[#A7D8F0] text-[#A7D8F0]", label: "Noch offen" },
-  missed: { icon: <XIcon className="h-4 w-4" />, className: "bg-[#FFE0DC] text-[#e2564c]", label: "Verpasst" },
-  not_scheduled: { icon: <Minus className="h-3.5 w-3.5" />, className: "bg-[#F5F7FA] text-[#c8d6e0]", label: "Heute nicht geplant" },
+  done: { icon: <Check className="h-4 w-4" />, className: "bg-[#34D399] text-white", label: "Erledigt" },
+  open: { icon: <Circle className="h-3.5 w-3.5" />, className: "bg-[#111118] border-2 border-[#D8B4FE] text-[#D8B4FE]", label: "Noch offen" },
+  missed: { icon: <XIcon className="h-4 w-4" />, className: "bg-[#3B1420] text-[#FB7185]", label: "Verpasst" },
+  not_scheduled: { icon: <Minus className="h-3.5 w-3.5" />, className: "bg-[#171720] text-[#5F5B68]", label: "Heute nicht geplant" },
 } as const;
 
 type AwardsResponse = {
@@ -228,7 +228,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
     <div className="space-y-6">
       <Link
         href={`/groups/${detail.groupId}/routines`}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5b7a91] hover:text-[#4FA8D8]"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8C5D2] hover:text-[#A855F7]"
       >
         <ArrowLeft className="h-4 w-4" /> Alle Gruppenroutinen
       </Link>
@@ -243,7 +243,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
           </div>
           <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-extrabold text-[#183B56]">{detail.title}</h1>
+              <h1 className="text-xl font-extrabold text-[#F8F7FC]">{detail.title}</h1>
               <span
                 className="flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5"
                 style={{ backgroundColor: detail.group.color + "1a", color: detail.group.color }}
@@ -252,18 +252,18 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
                 {detail.group.name}
               </span>
               {detail.status !== "ACTIVE" && (
-                <span className="text-xs font-bold text-[#5b7a91] bg-[#F5F7FA] rounded-full px-2 py-0.5">
+                <span className="text-xs font-bold text-[#C8C5D2] bg-[#171720] rounded-full px-2 py-0.5">
                   {detail.status === "PAUSED" ? "Pausiert" : "Beendet"}
                 </span>
               )}
               {detail.mandatory && (
-                <span className="text-xs font-bold text-[#FF8A80] bg-[#FFF0EE] rounded-full px-2 py-0.5">
+                <span className="text-xs font-bold text-[#FB7185] bg-[#2A1219] rounded-full px-2 py-0.5">
                   Verpflichtend
                 </span>
               )}
             </div>
-            {detail.description && <p className="text-sm text-[#5b7a91] mt-1">{detail.description}</p>}
-            <p className="text-xs text-[#9db3c2] mt-1">
+            {detail.description && <p className="text-sm text-[#C8C5D2] mt-1">{detail.description}</p>}
+            <p className="text-xs text-[#8D8998] mt-1">
               {catMeta.label} · <span style={{ color: diffMeta.color }}>+{detail.xpReward} XP</span>
             </p>
           </div>
@@ -297,7 +297,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
       </Card>
 
       {needsResponse && (
-        <Card className="border-2 border-[#A7D8F0]">
+        <Card className="border-2 border-[#D8B4FE]">
           <CardTitle>Machst du mit?</CardTitle>
           <CardSubtitle className="mb-4">
             Der Gruppenanführer hat dich zu &quot;{detail.title}&quot; eingeladen.
@@ -316,7 +316,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
 
       {canRejoin && (
         <Card>
-          <p className="text-sm text-[#5b7a91] mb-3">
+          <p className="text-sm text-[#C8C5D2] mb-3">
             {participation?.status === "DECLINED"
               ? "Du hast diese Gruppenroutine abgelehnt."
               : "Du hast diese Gruppenroutine verlassen."}
@@ -334,7 +334,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
             {!detail.mandatory && (
               <button
                 onClick={() => setLeaveOpen(true)}
-                className="flex items-center gap-1 text-xs font-semibold text-[#5b7a91] hover:text-[#FF8A80]"
+                className="flex items-center gap-1 text-xs font-semibold text-[#C8C5D2] hover:text-[#FB7185]"
               >
                 <LogOut className="h-3.5 w-3.5" /> Teilnahme beenden
               </button>
@@ -344,7 +344,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
             <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold", dayCfg.className)}>
               {dayCfg.icon} {dayCfg.label}
             </span>
-            <div className="text-xs text-[#5b7a91]">
+            <div className="text-xs text-[#C8C5D2]">
               🔥 {participation.currentStreak} Tage Streak · Rekord {participation.longestStreak}
             </div>
             {todayStatus !== "not_scheduled" && (
@@ -356,7 +356,7 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
                       animate={{ opacity: 0, y: -30 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="absolute -top-6 right-0 text-xs font-bold text-[#FFD166] pointer-events-none"
+                      className="absolute -top-6 right-0 text-xs font-bold text-[#FACC15] pointer-events-none"
                     >
                       +{detail.xpReward} XP
                     </motion.div>
@@ -367,13 +367,13 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
                   className={clsx(
                     "h-11 w-11 rounded-full flex items-center justify-center border-2 transition-all",
                     todayStatus === "done"
-                      ? "bg-[#78D6B0] border-[#78D6B0] text-white scale-105"
-                      : "border-[#A7D8F0] text-transparent hover:bg-[#EAF7FC]"
+                      ? "bg-[#34D399] border-[#34D399] text-white scale-105"
+                      : "border-[#D8B4FE] text-transparent hover:bg-[#171720]"
                   )}
                   aria-pressed={todayStatus === "done"}
                   aria-label="Heute abhaken"
                 >
-                  <Check className="h-5 w-5" style={{ opacity: todayStatus === "done" ? 1 : 0.15, color: todayStatus === "done" ? "white" : "#A7D8F0" }} />
+                  <Check className="h-5 w-5" style={{ opacity: todayStatus === "done" ? 1 : 0.15, color: todayStatus === "done" ? "white" : "#D8B4FE" }} />
                 </button>
               </div>
             )}
@@ -382,14 +382,14 @@ export function GroupRoutineDetailClient({ detail }: { detail: GroupRoutineDetai
       )}
 
       {championAward && (
-        <Card className="border-2" style={{ borderColor: "#FFD166", backgroundColor: "#FFFBEE" }}>
+        <Card className="border-2" style={{ borderColor: "#FACC15", backgroundColor: "#2A2107" }}>
           <div className="flex items-center gap-3 flex-wrap">
-            <Crown className="h-8 w-8 text-[#FFD166] shrink-0" />
+            <Crown className="h-8 w-8 text-[#FACC15] shrink-0" />
             <div className="flex-1 min-w-[200px]">
-              <div className="font-bold text-[#183B56]">
+              <div className="font-bold text-[#F8F7FC]">
                 {championAward.username ?? "Ein Mitglied"} ist diese Woche Routine-Champion!
               </div>
-              <div className="text-sm text-[#5b7a91]">Herzlichen Glückwunsch zur konsequentesten Teilnahme.</div>
+              <div className="text-sm text-[#C8C5D2]">Herzlichen Glückwunsch zur konsequentesten Teilnahme.</div>
             </div>
             {otherAwards.length > 0 && (
               <div className="flex gap-2 flex-wrap">

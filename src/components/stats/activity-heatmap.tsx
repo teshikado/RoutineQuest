@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
-const MINT_RAMP = ["#F5F7FA", "#D3F0E3", "#A2E0C3", "#6BC99C", "#3FAE7F", "#237355"];
+// Monotonic dark-theme intensity ramp: index 0 = no data (blends with card),
+// index 5 = maximum activity (bright success green glow).
+const MINT_RAMP = ["#171720", "#12261E", "#155E3E", "#1C8A5D", "#22B37A", "#34D399"];
 
 function levelFor(count: number, scheduled: number): number {
   if (scheduled === 0) return 0;
@@ -28,7 +30,7 @@ export function ActivityHeatmap({ data }: { data: { date: string; count: number;
       <div className="flex gap-1 overflow-x-auto pb-2">
         <div className="flex flex-col gap-1 pr-1 shrink-0">
           {Object.values(WEEKDAY_LABELS).map((label, i) => (
-            <div key={i} className="h-3.5 w-6 text-[9px] text-[#9db3c2] flex items-center">
+            <div key={i} className="h-3.5 w-6 text-[9px] text-[#8D8998] flex items-center">
               {i % 2 === 0 ? label : ""}
             </div>
           ))}
@@ -48,12 +50,12 @@ export function ActivityHeatmap({ data }: { data: { date: string; count: number;
         ))}
       </div>
       <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
-        <div className="h-6 text-xs text-[#5b7a91]">
+        <div className="h-6 text-xs text-[#C8C5D2]">
           {hovered
             ? `${hovered.date}: ${hovered.count} von ${hovered.scheduled} Aufgaben erledigt`
             : "Fahre über ein Feld für Details"}
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-[#9db3c2]">
+        <div className="flex items-center gap-1 text-[10px] text-[#8D8998]">
           Weniger
           {MINT_RAMP.map((color, i) => (
             <span key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />

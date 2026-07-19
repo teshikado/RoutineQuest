@@ -2,12 +2,12 @@
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const CHART_GOLD = "#D69E22";
+const CHART_GOLD = "#FACC15";
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg bg-[#183B56] text-white text-xs px-3 py-2 shadow-lg">
+    <div className="rounded-lg bg-[#1D1D28] text-white text-xs px-3 py-2 shadow-lg">
       <div className="font-semibold">Woche {label}</div>
       <div>{payload[0].value} XP</div>
     </div>
@@ -24,10 +24,10 @@ export function WeeklyXpChart({ data }: { data: { label: string; xp: number }[] 
             <stop offset="100%" stopColor={CHART_GOLD} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#EAF7FC" />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9db3c2" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9db3c2" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#EAF7FC", strokeWidth: 2 }} />
+        <CartesianGrid vertical={false} stroke="#292936" />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#8D8998" }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: "#8D8998" }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#292936", strokeWidth: 2 }} />
         <Area
           type="monotone"
           dataKey="xp"

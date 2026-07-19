@@ -19,10 +19,10 @@ import type { GroupRoutineListItem } from "@/lib/group-routine-data";
 import type { Category, Difficulty } from "@prisma/client";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  JOINED: { label: "Dabei", className: "bg-[#78D6B0] text-white" },
-  PENDING: { label: "Antwort ausstehend", className: "bg-[#FFD166] text-[#183B56]" },
-  DECLINED: { label: "Abgelehnt", className: "bg-[#F5F7FA] text-[#5b7a91]" },
-  LEFT: { label: "Verlassen", className: "bg-[#F5F7FA] text-[#5b7a91]" },
+  JOINED: { label: "Dabei", className: "bg-[#34D399] text-white" },
+  PENDING: { label: "Antwort ausstehend", className: "bg-[#FACC15] text-[#241a03]" },
+  DECLINED: { label: "Abgelehnt", className: "bg-[#171720] text-[#C8C5D2]" },
+  LEFT: { label: "Verlassen", className: "bg-[#171720] text-[#C8C5D2]" },
 };
 
 function formatShortDateDe(iso: string): string {
@@ -57,22 +57,22 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
             <DynamicIcon name={routine.icon} className="h-5 w-5" style={{ color: routine.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-[#183B56] truncate">{routine.title}</div>
-            <div className="text-xs text-[#5b7a91]">
+            <div className="font-bold text-[#F8F7FC] truncate">{routine.title}</div>
+            <div className="text-xs text-[#C8C5D2]">
               {catMeta.label} · <span style={{ color: diffMeta.color }}>+{routine.xpReward} XP</span>
             </div>
           </div>
           {routine.status === "PAUSED" && (
-            <span className="text-[10px] font-bold text-[#5b7a91] bg-[#F5F7FA] rounded-full px-2 py-0.5 shrink-0">
+            <span className="text-[10px] font-bold text-[#C8C5D2] bg-[#171720] rounded-full px-2 py-0.5 shrink-0">
               Pausiert
             </span>
           )}
         </div>
 
-        {routine.description && <p className="text-sm text-[#5b7a91] line-clamp-2">{routine.description}</p>}
+        {routine.description && <p className="text-sm text-[#C8C5D2] line-clamp-2">{routine.description}</p>}
 
         {isWeeklyTarget ? (
-          <span className="self-start text-[10px] font-bold text-[#4FA8D8] bg-[#EAF7FC] rounded-full px-2 py-1">
+          <span className="self-start text-[10px] font-bold text-[#A855F7] bg-[#171720] rounded-full px-2 py-1">
             {routine.goalTarget}× pro Woche (freie Tagwahl)
           </span>
         ) : (
@@ -83,8 +83,8 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
                 className={clsx(
                   "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
                   routine.scheduledDays.includes(Number(day))
-                    ? "bg-[#4FA8D8] text-white"
-                    : "bg-[#F5F7FA] text-[#c8d6e0]"
+                    ? "bg-[#A855F7] text-white"
+                    : "bg-[#171720] text-[#5F5B68]"
                 )}
               >
                 {label[0]}
@@ -93,10 +93,10 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
           </div>
         )}
 
-        <div className="text-xs font-semibold text-[#4FA8D8]">{periodProgressLabel(routine)}</div>
+        <div className="text-xs font-semibold text-[#A855F7]">{periodProgressLabel(routine)}</div>
 
-        <div className="flex items-center justify-between pt-1 border-t border-[#F5F7FA] mt-1 flex-wrap gap-1.5">
-          <span className="flex items-center gap-1 text-xs text-[#5b7a91]">
+        <div className="flex items-center justify-between pt-1 border-t border-[#171720] mt-1 flex-wrap gap-1.5">
+          <span className="flex items-center gap-1 text-xs text-[#C8C5D2]">
             <Users className="h-3.5 w-3.5" /> {routine.participantCount}
           </span>
           {statusMeta && (
@@ -105,7 +105,7 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
             </span>
           )}
           {routine.mandatory && (
-            <span className="text-[10px] font-bold text-[#FF8A80] bg-[#FFF0EE] rounded-full px-2 py-0.5">
+            <span className="text-[10px] font-bold text-[#FB7185] bg-[#2A1219] rounded-full px-2 py-0.5">
               Verpflichtend
             </span>
           )}
@@ -133,12 +133,12 @@ function RoutineSection({
     <div>
       <div className="flex items-center gap-2 mb-3">
         {icon}
-        <h2 className="text-sm font-extrabold text-[#183B56] uppercase tracking-wide">
-          {title} <span className="text-[#9db3c2] font-semibold">({routines.length})</span>
+        <h2 className="text-sm font-extrabold text-[#F8F7FC] uppercase tracking-wide">
+          {title} <span className="text-[#8D8998] font-semibold">({routines.length})</span>
         </h2>
       </div>
       {routines.length === 0 ? (
-        <p className="text-sm text-[#9db3c2] mb-2">{emptyHint}</p>
+        <p className="text-sm text-[#8D8998] mb-2">{emptyHint}</p>
       ) : (
         <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" stagger={0.05}>
           {routines.map((routine) => (
@@ -227,8 +227,8 @@ export function GroupRoutinesListClient({
             <DynamicIcon name={group.icon} className="h-5 w-5" style={{ color: group.color }} />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-[#183B56]">Gruppenroutinen</h1>
-            <p className="text-[#5b7a91] mt-0.5">{group.name}</p>
+            <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Gruppenroutinen</h1>
+            <p className="text-[#C8C5D2] mt-0.5">{group.name}</p>
           </div>
         </div>
         {isLeader && (
@@ -255,20 +255,20 @@ export function GroupRoutinesListClient({
         <div className="space-y-8">
           <RoutineSection
             title="Aktive Routinen"
-            icon={<PlayCircle className="h-4 w-4 text-[#78D6B0]" />}
+            icon={<PlayCircle className="h-4 w-4 text-[#34D399]" />}
             routines={active}
             groupId={group.id}
             emptyHint="Gerade läuft keine Gruppenroutine."
           />
           <RoutineSection
             title="Kommende Routinen"
-            icon={<CalendarClock className="h-4 w-4 text-[#FFD166]" />}
+            icon={<CalendarClock className="h-4 w-4 text-[#FACC15]" />}
             routines={upcoming}
             groupId={group.id}
           />
           <RoutineSection
             title="Beendete Routinen"
-            icon={<CheckCircle2 className="h-4 w-4 text-[#9db3c2]" />}
+            icon={<CheckCircle2 className="h-4 w-4 text-[#8D8998]" />}
             routines={ended}
             groupId={group.id}
           />

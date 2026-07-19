@@ -21,43 +21,43 @@ export default async function StatsPage() {
   return (
     <div className="space-y-6">
       <Reveal>
-        <h1 className="text-2xl font-extrabold text-[#183B56]">Statistiken</h1>
-        <p className="text-[#5b7a91] mt-1">Dein Fortschritt im Überblick.</p>
+        <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Statistiken</h1>
+        <p className="text-[#C8C5D2] mt-1">Dein Fortschritt im Überblick.</p>
       </Reveal>
 
       <RevealGroup className="grid grid-cols-2 lg:grid-cols-4 gap-4" stagger={0.05}>
         <Card className="flex items-center gap-3">
-          <Flame className="h-8 w-8 text-[#FFD166] shrink-0" />
+          <Flame className="h-8 w-8 text-[#FACC15] shrink-0" />
           <div>
-            <div className="text-xl font-extrabold text-[#183B56] tabular-nums">{stats.currentStreak}</div>
-            <div className="text-xs text-[#5b7a91]">Aktuelle Streak</div>
+            <div className="text-xl font-extrabold text-[#F8F7FC] tabular-nums">{stats.currentStreak}</div>
+            <div className="text-xs text-[#C8C5D2]">Aktuelle Streak</div>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
-          <Award className="h-8 w-8 text-[#4FA8D8] shrink-0" />
+          <Award className="h-8 w-8 text-[#A855F7] shrink-0" />
           <div>
-            <div className="text-xl font-extrabold text-[#183B56] tabular-nums">{stats.longestStreak}</div>
-            <div className="text-xs text-[#5b7a91]">Längste Erfolgsserie</div>
+            <div className="text-xl font-extrabold text-[#F8F7FC] tabular-nums">{stats.longestStreak}</div>
+            <div className="text-xs text-[#C8C5D2]">Längste Erfolgsserie</div>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
-          <DynamicIcon name="Sparkles" className="h-8 w-8 text-[#D69E22] shrink-0" />
+          <DynamicIcon name="Sparkles" className="h-8 w-8 text-[#FACC15] shrink-0" />
           <div>
-            <div className="text-xl font-extrabold text-[#183B56] tabular-nums">{stats.thisWeekXp}</div>
-            <div className="text-xs text-[#5b7a91]">XP diese Woche</div>
+            <div className="text-xl font-extrabold text-[#F8F7FC] tabular-nums">{stats.thisWeekXp}</div>
+            <div className="text-xs text-[#C8C5D2]">XP diese Woche</div>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
           {stats.xpChangePct !== null && stats.xpChangePct >= 0 ? (
-            <TrendingUp className="h-8 w-8 text-[#3FAE7F] shrink-0" />
+            <TrendingUp className="h-8 w-8 text-[#34D399] shrink-0" />
           ) : (
-            <TrendingDown className="h-8 w-8 text-[#E2564C] shrink-0" />
+            <TrendingDown className="h-8 w-8 text-[#FB7185] shrink-0" />
           )}
           <div>
-            <div className="text-xl font-extrabold text-[#183B56] tabular-nums">
+            <div className="text-xl font-extrabold text-[#F8F7FC] tabular-nums">
               {stats.xpChangePct === null ? "–" : `${stats.xpChangePct > 0 ? "+" : ""}${stats.xpChangePct}%`}
             </div>
-            <div className="text-xs text-[#5b7a91]">Vs. letzte Woche</div>
+            <div className="text-xs text-[#C8C5D2]">Vs. letzte Woche</div>
           </div>
         </Card>
       </RevealGroup>
@@ -114,7 +114,7 @@ export default async function StatsPage() {
       <Reveal delay={0.05}>
         <Card>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[#E2564C]" /> Häufig ausgelassene Routinen
+            <AlertTriangle className="h-4 w-4 text-[#FB7185]" /> Häufig ausgelassene Routinen
           </CardTitle>
           <CardSubtitle className="mb-3">Letzte 90 Tage</CardSubtitle>
           {stats.frequentlySkipped.length === 0 ? (
@@ -134,12 +134,12 @@ export default async function StatsPage() {
                     <DynamicIcon name={r.icon} className="h-4 w-4" style={{ color: r.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-[#183B56] truncate">{r.title}</div>
-                    <div className="text-xs text-[#5b7a91]">
+                    <div className="text-sm font-semibold text-[#F8F7FC] truncate">{r.title}</div>
+                    <div className="text-xs text-[#C8C5D2]">
                       {r.missed} von {r.scheduled} verpasst
                     </div>
                   </div>
-                  <div className="text-sm font-bold text-[#E2564C] tabular-nums">{Math.round(r.missRate * 100)}%</div>
+                  <div className="text-sm font-bold text-[#FB7185] tabular-nums">{Math.round(r.missRate * 100)}%</div>
                 </li>
               ))}
             </ul>

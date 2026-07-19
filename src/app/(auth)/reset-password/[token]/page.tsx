@@ -42,19 +42,19 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   if (done) {
     return (
       <div className="text-center py-4">
-        <div className="h-14 w-14 rounded-full bg-[#EAF7FC] flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="h-7 w-7 text-[#78D6B0]" />
+        <div className="h-14 w-14 rounded-full bg-[#171720] flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="h-7 w-7 text-[#34D399]" />
         </div>
-        <h1 className="text-xl font-bold text-[#183B56] mb-2">Passwort geändert</h1>
-        <p className="text-sm text-[#5b7a91]">Du wirst zur Anmeldung weitergeleitet…</p>
+        <h1 className="text-xl font-bold text-[#F8F7FC] mb-2">Passwort geändert</h1>
+        <p className="text-sm text-[#C8C5D2]">Du wirst zur Anmeldung weitergeleitet…</p>
       </div>
     );
   }
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-[#183B56] mb-1">Neues Passwort</h1>
-      <p className="text-sm text-[#5b7a91] mb-6">Wähle ein neues, sicheres Passwort.</p>
+      <h1 className="text-2xl font-bold text-[#F8F7FC] mb-1">Neues Passwort</h1>
+      <p className="text-sm text-[#C8C5D2] mb-6">Wähle ein neues, sicheres Passwort.</p>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div>
           <Label htmlFor="password">Neues Passwort</Label>
@@ -85,8 +85,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
           {loading ? "Wird gespeichert…" : "Passwort speichern"}
         </Button>
       </form>
-      <p className="text-sm text-center text-[#5b7a91] mt-6">
-        <Link href="/login" className="text-[#4FA8D8] font-semibold hover:underline">
+      <p className="text-sm text-center text-[#C8C5D2] mt-6">
+        <Link href="/login" className="text-[#A855F7] font-semibold hover:underline">
           Zurück zur Anmeldung
         </Link>
       </p>

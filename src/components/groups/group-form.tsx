@@ -79,7 +79,7 @@ export function GroupForm({
           onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
           rows={2}
           maxLength={200}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
         />
       </div>
       <div>
@@ -94,8 +94,8 @@ export function GroupForm({
               className={clsx(
                 "h-9 w-9 rounded-lg flex items-center justify-center border transition-colors",
                 values.icon === icon
-                  ? "border-[#4FA8D8] bg-[#EAF7FC] text-[#4FA8D8]"
-                  : "border-transparent bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "border-[#A855F7] bg-[#171720] text-[#A855F7]"
+                  : "border-transparent bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               <DynamicIcon name={icon} className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function GroupForm({
               aria-pressed={values.color === color}
               className={clsx(
                 "h-8 w-8 rounded-full border-2 transition-transform",
-                values.color === color ? "border-[#183B56] scale-110" : "border-white"
+                values.color === color ? "border-[#F8F7FC] scale-110" : "border-transparent"
               )}
               style={{ backgroundColor: color }}
             />
@@ -134,12 +134,12 @@ export function GroupForm({
             placeholder="unbegrenzt"
           />
         </div>
-        <label className="flex items-center gap-2 mt-7 text-sm font-medium text-[#183B56]">
+        <label className="flex items-center gap-2 mt-7 text-sm font-medium text-[#F8F7FC]">
           <input
             type="checkbox"
             checked={values.isPrivate}
             onChange={(e) => setValues((v) => ({ ...v, isPrivate: e.target.checked }))}
-            className="h-4 w-4 rounded accent-[#4FA8D8]"
+            className="h-4 w-4 rounded accent-[#A855F7]"
           />
           Private Gruppe
         </label>

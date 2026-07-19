@@ -222,7 +222,7 @@ export function GroupRoutineForm({
           onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
           maxLength={300}
           rows={2}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] placeholder:text-[#9db3c2] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8] focus:border-transparent"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] placeholder:text-[#8D8998] focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent"
         />
       </div>
 
@@ -232,7 +232,7 @@ export function GroupRoutineForm({
           id="gr-category"
           value={values.category}
           onChange={(e) => setValues((v) => ({ ...v, category: e.target.value as Category }))}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
         >
           {Object.entries(CATEGORY_META).map(([key, meta]) => (
             <option key={key} value={key}>
@@ -255,8 +255,8 @@ export function GroupRoutineForm({
               className={clsx(
                 "h-9 w-9 rounded-lg flex items-center justify-center border transition-colors",
                 values.icon === icon
-                  ? "border-[#4FA8D8] bg-[#EAF7FC] text-[#4FA8D8]"
-                  : "border-transparent bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "border-[#A855F7] bg-[#171720] text-[#A855F7]"
+                  : "border-transparent bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               <DynamicIcon name={icon} className="h-4 w-4" />
@@ -277,7 +277,7 @@ export function GroupRoutineForm({
               aria-pressed={values.color === color}
               className={clsx(
                 "h-8 w-8 rounded-full border-2 transition-transform",
-                values.color === color ? "border-[#183B56] scale-110" : "border-white"
+                values.color === color ? "border-[#F8F7FC] scale-110" : "border-transparent"
               )}
               style={{ backgroundColor: color }}
             />
@@ -298,8 +298,8 @@ export function GroupRoutineForm({
                 className={clsx(
                   "rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
                   values.difficulty === key
-                    ? "border-[#4FA8D8] bg-[#EAF7FC] text-[#183B56]"
-                    : "border-[#dbeaf3] text-[#5b7a91] hover:bg-[#F5F7FA]"
+                    ? "border-[#A855F7] bg-[#171720] text-[#F8F7FC]"
+                    : "border-[#292936] text-[#C8C5D2] hover:bg-[#171720]"
                 )}
               >
                 {meta.label}
@@ -335,8 +335,8 @@ export function GroupRoutineForm({
               className={clsx(
                 "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
                 periodPreset === p.key
-                  ? "bg-[#4FA8D8] text-white"
-                  : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "bg-[#A855F7] text-white"
+                  : "bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               {p.label}
@@ -392,8 +392,8 @@ export function GroupRoutineForm({
               className={clsx(
                 "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
                 repetitionPreset === p.key
-                  ? "bg-[#4FA8D8] text-white"
-                  : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "bg-[#A855F7] text-white"
+                  : "bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               {p.label}
@@ -412,8 +412,8 @@ export function GroupRoutineForm({
                 className={clsx(
                   "h-10 rounded-lg text-xs font-bold transition-colors",
                   values.scheduledDays.includes(Number(day))
-                    ? "bg-[#4FA8D8] text-white"
-                    : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                    ? "bg-[#A855F7] text-white"
+                    : "bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
                 )}
               >
                 {label}
@@ -429,7 +429,7 @@ export function GroupRoutineForm({
               id="gr-goal-target"
               value={values.goalTarget}
               onChange={(e) => setValues((v) => ({ ...v, goalTarget: e.target.value }))}
-              className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+              className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -437,7 +437,7 @@ export function GroupRoutineForm({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-[#5b7a91] mt-1.5">
+            <p className="text-xs text-[#C8C5D2] mt-1.5">
               Mitglieder können sich die Tage selbst aussuchen, an denen sie die Routine erledigen.
             </p>
           </div>
@@ -449,19 +449,19 @@ export function GroupRoutineForm({
         <select
           value={values.visibility}
           onChange={(e) => setValues((v) => ({ ...v, visibility: e.target.value as GroupRoutineFormValues["visibility"] }))}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
         >
           <option value="ALL_MEMBERS">Alle Gruppenmitglieder</option>
           <option value="PARTICIPANTS_ONLY">Nur Teilnehmende</option>
         </select>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-[#183B56] font-medium">
+      <label className="flex items-center gap-2 text-sm text-[#F8F7FC] font-medium">
         <input
           type="checkbox"
           checked={values.mandatory}
           onChange={(e) => setValues((v) => ({ ...v, mandatory: e.target.checked }))}
-          className="h-4 w-4 rounded accent-[#4FA8D8]"
+          className="h-4 w-4 rounded accent-[#A855F7]"
         />
         Verpflichtend für alle Mitglieder (kein Ablehnen möglich)
       </label>

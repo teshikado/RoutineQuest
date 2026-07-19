@@ -107,7 +107,7 @@ export function RoutineForm({
           onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
           maxLength={300}
           rows={2}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] placeholder:text-[#9db3c2] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8] focus:border-transparent"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] placeholder:text-[#8D8998] focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent"
         />
       </div>
 
@@ -117,7 +117,7 @@ export function RoutineForm({
           id="category"
           value={values.category}
           onChange={(e) => setValues((v) => ({ ...v, category: e.target.value as Category }))}
-          className="w-full rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+          className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
         >
           {Object.entries(CATEGORY_META).map(([key, meta]) => (
             <option key={key} value={key}>
@@ -140,8 +140,8 @@ export function RoutineForm({
               className={clsx(
                 "h-9 w-9 rounded-lg flex items-center justify-center border transition-colors",
                 values.icon === icon
-                  ? "border-[#4FA8D8] bg-[#EAF7FC] text-[#4FA8D8]"
-                  : "border-transparent bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "border-[#A855F7] bg-[#171720] text-[#A855F7]"
+                  : "border-transparent bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               <DynamicIcon name={icon} className="h-4 w-4" />
@@ -162,7 +162,7 @@ export function RoutineForm({
               aria-pressed={values.color === color}
               className={clsx(
                 "h-8 w-8 rounded-full border-2 transition-transform",
-                values.color === color ? "border-[#183B56] scale-110" : "border-white"
+                values.color === color ? "border-[#F8F7FC] scale-110" : "border-transparent"
               )}
               style={{ backgroundColor: color }}
             />
@@ -183,8 +183,8 @@ export function RoutineForm({
                 className={clsx(
                   "rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
                   values.difficulty === key
-                    ? "border-[#4FA8D8] bg-[#EAF7FC] text-[#183B56]"
-                    : "border-[#dbeaf3] text-[#5b7a91] hover:bg-[#F5F7FA]"
+                    ? "border-[#A855F7] bg-[#171720] text-[#F8F7FC]"
+                    : "border-[#292936] text-[#C8C5D2] hover:bg-[#171720]"
                 )}
               >
                 {meta.label}
@@ -207,8 +207,8 @@ export function RoutineForm({
               className={clsx(
                 "h-10 rounded-lg text-xs font-bold transition-colors",
                 values.scheduledDays.includes(Number(day))
-                  ? "bg-[#4FA8D8] text-white"
-                  : "bg-[#F5F7FA] text-[#5b7a91] hover:bg-[#EAF7FC]"
+                  ? "bg-[#A855F7] text-white"
+                  : "bg-[#171720] text-[#C8C5D2] hover:bg-[#171720]"
               )}
             >
               {label}
@@ -227,12 +227,12 @@ export function RoutineForm({
             onChange={(e) => setValues((v) => ({ ...v, timeOfDay: e.target.value }))}
           />
         </div>
-        <label className="flex items-center gap-2 mb-2.5 text-sm text-[#183B56] font-medium">
+        <label className="flex items-center gap-2 mb-2.5 text-sm text-[#F8F7FC] font-medium">
           <input
             type="checkbox"
             checked={values.reminderEnabled}
             onChange={(e) => setValues((v) => ({ ...v, reminderEnabled: e.target.checked }))}
-            className="h-4 w-4 rounded accent-[#4FA8D8]"
+            className="h-4 w-4 rounded accent-[#A855F7]"
           />
           Erinnerung aktivieren
         </label>

@@ -47,7 +47,7 @@ export function TaskCard({
     <div
       className={clsx(
         "relative flex items-center gap-4 rounded-2xl border p-4 transition-colors",
-        completed ? "bg-[#F5FBF8] border-[#d6f0e5]" : "bg-white border-[#EAF7FC] shadow-[0_2px_12px_rgba(24,59,86,0.05)]"
+        completed ? "bg-[#10241C] border-[#1F6B4A]" : "bg-[#111118] border-[#292936] shadow-[0_2px_12px_rgba(0,0,0,0.4)]"
       )}
     >
       <div
@@ -58,10 +58,10 @@ export function TaskCard({
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className={clsx("font-semibold text-[#183B56] truncate", completed && "line-through opacity-60")}>
+        <div className={clsx("font-semibold text-[#F8F7FC] truncate", completed && "line-through opacity-60")}>
           {routine.title}
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#5b7a91] mt-0.5">
+        <div className="flex items-center gap-2 text-xs text-[#C8C5D2] mt-0.5">
           <span>{meta.label}</span>
           <span>·</span>
           <span className="font-semibold" style={{ color: meta.color }}>
@@ -100,8 +100,8 @@ export function TaskCard({
           className={clsx(
             "h-9 w-9 rounded-full flex items-center justify-center border-2 transition-all disabled:opacity-60",
             completed
-              ? "bg-[#78D6B0] border-[#78D6B0] text-white scale-105"
-              : "border-[#A7D8F0] text-transparent hover:bg-[#EAF7FC]"
+              ? "bg-[#34D399] border-[#34D399] text-white scale-105"
+              : "border-[#D8B4FE] text-transparent hover:bg-[#171720]"
           )}
         >
           <motion.span
@@ -118,7 +118,7 @@ export function TaskCard({
         <button
           onClick={handleToggle}
           disabled={busy}
-          className="absolute -bottom-2 right-4 flex items-center gap-1 rounded-full bg-white border border-[#EAF7FC] px-2 py-0.5 text-[10px] font-semibold text-[#5b7a91] hover:text-[#4FA8D8] shadow-sm"
+          className="absolute -bottom-2 right-4 flex items-center gap-1 rounded-full bg-[#111118] border border-[#292936] px-2 py-0.5 text-[10px] font-semibold text-[#C8C5D2] hover:text-[#A855F7] shadow-sm"
         >
           <Undo2 className="h-3 w-3" />
           Rückgängig

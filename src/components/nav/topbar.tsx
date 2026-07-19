@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { User } from "@prisma/client";
 import { getLevelProgress, getRankForLevel } from "@/lib/xp";
 import { RankBadge } from "@/components/ui/rank-badge";
@@ -9,16 +10,21 @@ export function Topbar({ user }: { user: User }) {
   const rank = getRankForLevel(progress.level);
 
   return (
-    <header className="h-16 shrink-0 flex items-center gap-3 px-4 md:px-8 glass-surface border-b border-[#EAF7FC] sticky top-0 z-30">
+    <header className="h-16 shrink-0 flex items-center gap-3 px-4 md:px-8 glass-surface border-b border-[#292936] sticky top-0 z-30">
       <div className="md:hidden flex items-center gap-2">
-        <div className="h-7 w-7 rounded-lg bg-[#4FA8D8] flex items-center justify-center shadow-[var(--shadow-blue-sm)]">
-          <span className="text-white text-xs font-bold">RQ</span>
-        </div>
+        <Image
+          src="/logo/logo-mark-sm.png"
+          alt="RoutineQuest"
+          width={28}
+          height={21}
+          style={{ filter: "drop-shadow(0 0 6px rgba(168,85,247,0.5))" }}
+          priority
+        />
       </div>
 
       <div className="ml-auto flex items-center gap-3">
         <div
-          className="hidden sm:flex items-center gap-2 rounded-full bg-[#EAF7FC] pl-1.5 pr-3 py-1 text-xs font-bold text-[#183B56]"
+          className="hidden sm:flex items-center gap-2 rounded-full bg-[#171720] pl-1.5 pr-3 py-1 text-xs font-bold text-[#F8F7FC]"
           title={rank.name}
         >
           <RankBadge icon={rank.icon} color={rank.color} size="xs" />
@@ -26,8 +32,8 @@ export function Topbar({ user }: { user: User }) {
         </div>
 
         {user.currentStreak > 0 && (
-          <div className="hidden sm:flex items-center gap-1 rounded-full bg-[#FFF3D6] px-3 py-1.5 text-xs font-bold text-[#a8730a]">
-            <Flame className="h-3.5 w-3.5 text-[#FFD166] animate-flame" />
+          <div className="hidden sm:flex items-center gap-1 rounded-full bg-[#2A2107] px-3 py-1.5 text-xs font-bold text-[#FBBF24]">
+            <Flame className="h-3.5 w-3.5 text-[#FACC15] animate-flame" />
             {user.currentStreak}
           </div>
         )}

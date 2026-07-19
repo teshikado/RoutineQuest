@@ -159,14 +159,14 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
           </div>
           <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-extrabold text-[#183B56]">{group.name}</h1>
-              <span className="flex items-center gap-1 text-xs text-[#5b7a91] bg-[#F5F7FA] rounded-full px-2 py-0.5">
+              <h1 className="text-xl font-extrabold text-[#F8F7FC]">{group.name}</h1>
+              <span className="flex items-center gap-1 text-xs text-[#C8C5D2] bg-[#171720] rounded-full px-2 py-0.5">
                 {group.isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
                 {group.isPrivate ? "Privat" : "Öffentlich"}
               </span>
             </div>
-            {group.description && <p className="text-sm text-[#5b7a91] mt-1">{group.description}</p>}
-            <p className="text-xs text-[#9db3c2] mt-1">
+            {group.description && <p className="text-sm text-[#C8C5D2] mt-1">{group.description}</p>}
+            <p className="text-xs text-[#8D8998] mt-1">
               {members.length} Mitglieder{group.maxMembers ? ` / ${group.maxMembers}` : ""}
             </p>
           </div>
@@ -204,7 +204,7 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
           <CardTitle>Mitglieder einladen</CardTitle>
           <CardSubtitle className="mb-3">Per Link, Code, Benutzername oder E-Mail.</CardSubtitle>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <code className="rounded-lg bg-[#F5F7FA] px-3 py-2 text-sm font-mono font-bold text-[#183B56]">
+            <code className="rounded-lg bg-[#171720] px-3 py-2 text-sm font-mono font-bold text-[#F8F7FC]">
               {inviteCode}
             </code>
             <Button size="sm" variant="secondary" onClick={copyLink}>
@@ -231,7 +231,7 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
         <CardTitle className="mb-3">Mitglieder</CardTitle>
         <ul className="space-y-1">
           {members.map((m) => (
-            <li key={m.userId} className="flex items-center gap-3 py-2 border-b border-[#F5F7FA] last:border-b-0">
+            <li key={m.userId} className="flex items-center gap-3 py-2 border-b border-[#171720] last:border-b-0">
               <div
                 className="h-9 w-9 rounded-full flex items-center justify-center text-lg shrink-0"
                 style={{ backgroundColor: m.avatarColor + "33" }}
@@ -239,13 +239,13 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
                 {m.avatarEmoji}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-[#183B56] truncate flex items-center gap-1.5">
+                <div className="text-sm font-semibold text-[#F8F7FC] truncate flex items-center gap-1.5">
                   {m.username}
-                  <span className="text-[10px] font-bold text-[#9db3c2] bg-[#F5F7FA] rounded-full px-1.5 py-0.5">
+                  <span className="text-[10px] font-bold text-[#8D8998] bg-[#171720] rounded-full px-1.5 py-0.5">
                     {ROLE_LABELS[m.role]}
                   </span>
                 </div>
-                <div className="text-xs text-[#5b7a91] flex items-center gap-1">
+                <div className="text-xs text-[#C8C5D2] flex items-center gap-1">
                   <DynamicIcon name={m.rankIcon} className="h-3 w-3" style={{ color: m.rankColor }} />
                   Level {m.level} · {m.rankName}
                 </div>
@@ -254,7 +254,7 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
                 <button
                   onClick={() => handleRoleChange(m.userId, m.role === "ADMIN" ? "MEMBER" : "ADMIN")}
                   title={m.role === "ADMIN" ? "Adminrechte entziehen" : "Zum Admin ernennen"}
-                  className="p-2 rounded-lg text-[#5b7a91] hover:bg-[#EAF7FC] hover:text-[#4FA8D8]"
+                  className="p-2 rounded-lg text-[#C8C5D2] hover:bg-[#171720] hover:text-[#A855F7]"
                 >
                   {m.role === "ADMIN" ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                 </button>
@@ -263,7 +263,7 @@ export function GroupDetailClient({ group }: { group: GroupDetail }) {
                 <button
                   onClick={() => setRemoveTarget(m)}
                   title="Entfernen"
-                  className="p-2 rounded-lg text-[#5b7a91] hover:bg-[#FFF0EE] hover:text-[#FF8A80]"
+                  className="p-2 rounded-lg text-[#C8C5D2] hover:bg-[#2A1219] hover:text-[#FB7185]"
                 >
                   <UserMinus className="h-4 w-4" />
                 </button>

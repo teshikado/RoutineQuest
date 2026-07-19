@@ -2,9 +2,9 @@ import clsx from "clsx";
 
 export function ProgressBar({
   ratio,
-  colorClass = "bg-[#4FA8D8]",
+  colorClass = "bg-[#A855F7]",
   gradient,
-  trackClass = "bg-[#EAF7FC]",
+  trackClass = "bg-[#171720]",
   height = "h-3",
   className,
   shine = false,

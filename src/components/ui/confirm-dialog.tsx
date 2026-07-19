@@ -24,7 +24,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Modal open={open} onClose={onClose} title={title} maxWidth="max-w-sm">
-      <p className="text-sm text-[#5b7a91] mb-6">{description}</p>
+      <p className="text-sm text-[#C8C5D2] mb-6">{description}</p>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose} disabled={loading}>
           Abbrechen

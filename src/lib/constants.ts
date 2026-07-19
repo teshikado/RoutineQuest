@@ -1,15 +1,15 @@
 import type { Category, Difficulty, GroupRoutineAwardType, NotificationType } from "@prisma/client";
 
 export const BRAND = {
-  babyBlue: "#A7D8F0",
-  iceBlue: "#EAF7FC",
-  buttonBlue: "#4FA8D8",
-  headingBlue: "#183B56",
+  purpleLight: "#D8B4FE",
+  border: "#292936",
+  purple: "#A855F7",
+  textPrimary: "#F8F7FC",
   white: "#FFFFFF",
-  grayLight: "#F5F7FA",
-  mint: "#78D6B0",
-  xpYellow: "#FFD166",
-  coral: "#FF8A80",
+  cardSurface: "#171720",
+  mint: "#34D399",
+  xpYellow: "#FACC15",
+  coral: "#FB7185",
 } as const;
 
 export const CATEGORY_META: Record<Category, { label: string; icon: string }> = {
@@ -24,7 +24,7 @@ export const CATEGORY_META: Record<Category, { label: string; icon: string }> = 
 
 export const DIFFICULTY_META: Record<Difficulty, { label: string; xp: number; color: string }> = {
   EASY: { label: "Leicht", xp: 10, color: BRAND.mint },
-  MEDIUM: { label: "Mittel", xp: 20, color: BRAND.buttonBlue },
+  MEDIUM: { label: "Mittel", xp: 20, color: BRAND.purple },
   HARD: { label: "Schwer", xp: 30, color: BRAND.coral },
 };
 
@@ -37,10 +37,10 @@ export const XP_BONUS = {
 export const STREAK_MIN_RATIO = 0.7;
 
 export const ROUTINE_COLORS = [
-  "#4FA8D8",
-  "#78D6B0",
-  "#FFD166",
-  "#FF8A80",
+  "#A855F7",
+  "#34D399",
+  "#FACC15",
+  "#FB7185",
   "#A78BFA",
   "#F472B6",
   "#38BDF8",
@@ -105,7 +105,7 @@ export const RANKS: RankDef[] = [
     maxLevel: 4,
     icon: "Sparkle",
     description: "Der erste Schritt wurde gemacht.",
-    color: "#A7D8F0",
+    color: "#D8B4FE",
   },
   {
     key: "ZIELSTARTER",
@@ -114,7 +114,7 @@ export const RANKS: RankDef[] = [
     maxLevel: 9,
     icon: "ArrowUp",
     description: "Die ersten Routinen werden aufgebaut.",
-    color: "#4FA8D8",
+    color: "#A855F7",
   },
   {
     key: "DURCHZIEHER",
@@ -123,7 +123,7 @@ export const RANKS: RankDef[] = [
     maxLevel: 19,
     icon: "ShieldCheck",
     description: "Der Nutzer zeigt echte Beständigkeit.",
-    color: "#78D6B0",
+    color: "#34D399",
   },
   {
     key: "FOKUS_PRO",
@@ -132,7 +132,7 @@ export const RANKS: RankDef[] = [
     maxLevel: 34,
     icon: "Target",
     description: "Disziplin und Fokus werden zur Gewohnheit.",
-    color: "#183B56",
+    color: "#CBD5F5",
   },
   {
     key: "CHAMPION",
@@ -141,7 +141,7 @@ export const RANKS: RankDef[] = [
     maxLevel: 49,
     icon: "Crown",
     description: "Der Nutzer gehört zu den besonders konsequenten Mitgliedern.",
-    color: "#FFD166",
+    color: "#FACC15",
   },
   {
     key: "LEGENDE",
@@ -150,7 +150,7 @@ export const RANKS: RankDef[] = [
     maxLevel: null,
     icon: "Gem",
     description: "Routinen wurden zu einem festen Teil des Lebens.",
-    color: "#A78BFA",
+    color: "#E238FF",
   },
 ];
 
@@ -216,7 +216,7 @@ export const GROUP_ROUTINE_AWARD_META: Record<GroupRoutineAwardType, AwardDef> =
     label: "Teamplayer",
     description: "Besonders aktive Teilnahme in dieser Woche.",
     icon: "Users",
-    color: BRAND.buttonBlue,
+    color: BRAND.purple,
   },
   PERFECT_WOCHE: {
     label: "Perfekte Woche",

@@ -53,8 +53,8 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-[#183B56] mb-1">Konto erstellen</h1>
-      <p className="text-sm text-[#5b7a91] mb-6">Starte deine erste Woche voller Fortschritt.</p>
+      <h1 className="text-2xl font-bold text-[#F8F7FC] mb-1">Konto erstellen</h1>
+      <p className="text-sm text-[#C8C5D2] mb-6">Starte deine erste Woche voller Fortschritt.</p>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div>
@@ -98,9 +98,9 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="text-sm text-center text-[#5b7a91] mt-6">
+      <p className="text-sm text-center text-[#C8C5D2] mt-6">
         Schon ein Konto?{" "}
-        <Link href="/login" className="text-[#4FA8D8] font-semibold hover:underline">
+        <Link href="/login" className="text-[#A855F7] font-semibold hover:underline">
           Anmelden
         </Link>
       </p>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
-const COLORS = ["#4FA8D8", "#78D6B0", "#FFD166", "#FF8A80", "#A7D8F0"];
+const COLORS = ["#A855F7", "#34D399", "#FACC15", "#FB7185", "#D8B4FE"];
 
 type Piece = { id: number; left: number; delay: number; duration: number; size: number; color: string; drift: number };
 

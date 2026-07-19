@@ -42,10 +42,10 @@ function JoinPageInner() {
     <div className="max-w-sm mx-auto mt-10">
       <Card>
         <div className="text-center mb-4">
-          <div className="h-12 w-12 rounded-full bg-[#EAF7FC] flex items-center justify-center mx-auto mb-3">
-            <Users className="h-6 w-6 text-[#4FA8D8]" />
+          <div className="h-12 w-12 rounded-full bg-[#171720] flex items-center justify-center mx-auto mb-3">
+            <Users className="h-6 w-6 text-[#A855F7]" />
           </div>
-          <h1 className="text-xl font-bold text-[#183B56]">Gruppe beitreten</h1>
+          <h1 className="text-xl font-bold text-[#F8F7FC]">Gruppe beitreten</h1>
         </div>
         <form onSubmit={join} className="space-y-4" noValidate>
           <div>

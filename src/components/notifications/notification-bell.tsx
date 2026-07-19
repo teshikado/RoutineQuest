@@ -68,11 +68,11 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Benachrichtigungen"
-        className="relative h-9 w-9 rounded-full flex items-center justify-center text-[#5b7a91] hover:bg-[#EAF7FC] transition-colors"
+        className="relative h-9 w-9 rounded-full flex items-center justify-center text-[#C8C5D2] hover:bg-[#171720] transition-colors"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#FF8A80]" />
+          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#FB7185]" />
         )}
       </button>
 
@@ -83,31 +83,31 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-2xl bg-white shadow-xl border border-[#EAF7FC] z-50"
+            className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-2xl bg-[#111118] shadow-xl border border-[#292936] z-50"
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#EAF7FC]">
-              <span className="font-bold text-sm text-[#183B56]">Benachrichtigungen</span>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#292936]">
+              <span className="font-bold text-sm text-[#F8F7FC]">Benachrichtigungen</span>
               {unreadCount > 0 && (
-                <button onClick={markAllRead} className="text-xs text-[#4FA8D8] font-semibold hover:underline">
+                <button onClick={markAllRead} className="text-xs text-[#A855F7] font-semibold hover:underline">
                   Alle als gelesen markieren
                 </button>
               )}
             </div>
             {notifications.length === 0 ? (
-              <p className="text-sm text-[#5b7a91] px-4 py-8 text-center">Noch keine Benachrichtigungen.</p>
+              <p className="text-sm text-[#C8C5D2] px-4 py-8 text-center">Noch keine Benachrichtigungen.</p>
             ) : (
               <ul>
                 {notifications.map((n) => (
                   <li
                     key={n.id}
                     className={clsx(
-                      "px-4 py-3 border-b border-[#F5F7FA] last:border-b-0",
-                      !n.read && "bg-[#EAF7FC]/50"
+                      "px-4 py-3 border-b border-[#171720] last:border-b-0",
+                      !n.read && "bg-[#171720]/50"
                     )}
                   >
-                    <div className="text-sm font-semibold text-[#183B56]">{n.title}</div>
-                    <div className="text-xs text-[#5b7a91] mt-0.5">{n.body}</div>
-                    <div className="text-[10px] text-[#9db3c2] mt-1">{timeAgo(n.createdAt)}</div>
+                    <div className="text-sm font-semibold text-[#F8F7FC]">{n.title}</div>
+                    <div className="text-xs text-[#C8C5D2] mt-0.5">{n.body}</div>
+                    <div className="text-[10px] text-[#8D8998] mt-1">{timeAgo(n.createdAt)}</div>
                   </li>
                 ))}
               </ul>

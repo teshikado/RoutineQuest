@@ -1,17 +1,16 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 /**
  * Soft cross-fade + upward slide between routes. Navigation chrome (sidebar, topbar,
  * bottom nav) lives outside this wrapper so it never re-animates on page change.
+ * Reduced motion is handled centrally by the `MotionConfig` in Providers (see Reveal.tsx
+ * for why this component doesn't branch on useReducedMotion() itself).
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const reduceMotion = useReducedMotion();
-
-  if (reduceMotion) return <>{children}</>;
 
   return (
     <AnimatePresence mode="wait" initial={false}>

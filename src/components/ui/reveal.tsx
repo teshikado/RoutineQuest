@@ -1,7 +1,7 @@
 "use client";
 
 import { Children, isValidElement } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 
 const DIRECTIONS = {
   up: { x: 0, y: 18 },
@@ -15,7 +15,12 @@ type Direction = keyof typeof DIRECTIONS;
 
 /**
  * Fades/slides a section in the moment it scrolls into view (once — it never re-triggers
- * on re-scroll). Falls back to a plain, unanimated wrapper for prefers-reduced-motion.
+ * on re-scroll). Always renders the same `motion.div` element regardless of the user's
+ * motion preference — reduced motion is handled centrally by the `MotionConfig` in
+ * Providers, not by branching to a different element here (that branching previously
+ * caused a real bug: `useReducedMotion()` can resolve differently between the server
+ * render and the client's first paint, which is a hydration mismatch that left whole
+ * sections — e.g. the login page — stuck invisible for reduced-motion users).
  */
 export function Reveal({
   children,
@@ -30,12 +35,7 @@ export function Reveal({
   direction?: Direction;
   amount?: number;
 }) {
-  const reduceMotion = useReducedMotion();
   const offset = DIRECTIONS[direction];
-
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
 
   return (
     <motion.div

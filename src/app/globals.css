@@ -1,30 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fa;
-  --foreground: #183b56;
+  /* ---------- Surfaces ---------- */
+  --background: #09090d;
+  --foreground: #f8f7fc;
 
-  --color-baby-blue: #a7d8f0;
-  --color-ice-blue: #eaf7fc;
-  --color-button-blue: #4fa8d8;
-  --color-heading-blue: #183b56;
-  --color-white: #ffffff;
-  --color-gray-light: #f5f7fa;
-  --color-mint: #78d6b0;
-  --color-xp-yellow: #ffd166;
-  --color-coral: #ff8a80;
+  --color-void: #050507;
+  --color-bg-app: #09090d;
+  --color-card: #111118;
+  --color-card-2: #171720;
+  --color-elevated: #1d1d28;
+  --color-border: #292936;
 
-  /* ---------- Shadow system: soft, layered, on-brand instead of flat black ---------- */
-  --shadow-xs: 0 1px 2px rgba(24, 59, 86, 0.04), 0 1px 1px rgba(24, 59, 86, 0.03);
-  --shadow-sm: 0 2px 8px rgba(24, 59, 86, 0.06), 0 1px 2px rgba(24, 59, 86, 0.04);
-  --shadow-md: 0 8px 24px rgba(24, 59, 86, 0.09), 0 2px 6px rgba(24, 59, 86, 0.05);
-  --shadow-lg: 0 16px 40px rgba(24, 59, 86, 0.14), 0 4px 10px rgba(24, 59, 86, 0.06);
-  --shadow-xl: 0 24px 64px rgba(24, 59, 86, 0.20), 0 8px 16px rgba(24, 59, 86, 0.08);
-  --shadow-blue: 0 8px 24px rgba(79, 168, 216, 0.32), 0 2px 6px rgba(79, 168, 216, 0.18);
-  --shadow-blue-sm: 0 2px 10px rgba(79, 168, 216, 0.28);
-  --shadow-gold: 0 8px 22px rgba(255, 209, 102, 0.35), 0 2px 6px rgba(255, 209, 102, 0.2);
-  --shadow-mint: 0 8px 22px rgba(120, 214, 176, 0.32), 0 2px 6px rgba(120, 214, 176, 0.18);
-  --shadow-coral: 0 8px 22px rgba(255, 138, 128, 0.32), 0 2px 6px rgba(255, 138, 128, 0.18);
+  /* ---------- Purple family (used deliberately, not interchangeably) ---------- */
+  --color-purple: #a855f7; /* primary actions, active nav */
+  --color-purple-neon: #c026ff; /* strong accents, high-emphasis glows */
+  --color-purple-light: #d8b4fe; /* light decorative accents, secondary highlights */
+  --color-purple-dark: #6d28d9; /* hover/pressed states */
+  --color-purple-deep: #2e1065; /* deep backdrops, gradients */
+  --color-pink-accent: #e238ff; /* rare high-energy accent (level up, streak) */
+
+  /* ---------- Text ---------- */
+  --color-text-primary: #f8f7fc;
+  --color-text-secondary: #c8c5d2;
+  --color-text-muted: #8d8998;
+  --color-text-disabled: #5f5b68;
+
+  /* ---------- Status ---------- */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #fb7185;
+  --color-info: #a78bfa;
+  --color-xp: #facc15;
+
+  /* ---------- Shadow / glow system: dark surfaces need light, not shadow ---------- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.6), 0 6px 14px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 28px 72px rgba(0, 0, 0, 0.68), 0 10px 20px rgba(0, 0, 0, 0.45);
+
+  --shadow-purple: 0 8px 26px rgba(168, 85, 247, 0.38), 0 2px 8px rgba(168, 85, 247, 0.22);
+  --shadow-purple-sm: 0 2px 12px rgba(168, 85, 247, 0.3);
+  --shadow-purple-lg: 0 12px 40px rgba(192, 38, 255, 0.4), 0 0 60px rgba(168, 85, 247, 0.18);
+  --shadow-gold: 0 8px 24px rgba(250, 204, 21, 0.35), 0 2px 8px rgba(250, 204, 21, 0.2);
+  --shadow-mint: 0 8px 24px rgba(52, 211, 153, 0.32), 0 2px 8px rgba(52, 211, 153, 0.18);
+  --shadow-coral: 0 8px 24px rgba(251, 113, 133, 0.3), 0 2px 8px rgba(251, 113, 133, 0.18);
 
   /* ---------- Easing ---------- */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
@@ -36,15 +57,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --color-babyblue: var(--color-baby-blue);
-  --color-iceblue: var(--color-ice-blue);
-  --color-buttonblue: var(--color-button-blue);
-  --color-headingblue: var(--color-heading-blue);
-  --color-graylight: var(--color-gray-light);
-  --color-mint: var(--color-mint);
-  --color-xpyellow: var(--color-xp-yellow);
-  --color-coral: var(--color-coral);
-
   --font-sans: var(--font-inter);
   --font-heading: var(--font-manrope);
 
@@ -53,38 +65,61 @@
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
-  --shadow-blue: var(--shadow-blue);
-  --shadow-blue-sm: var(--shadow-blue-sm);
+  --shadow-purple: var(--shadow-purple);
+  --shadow-purple-sm: var(--shadow-purple-sm);
+  --shadow-purple-lg: var(--shadow-purple-lg);
   --shadow-gold: var(--shadow-gold);
   --shadow-mint: var(--shadow-mint);
   --shadow-coral: var(--shadow-coral);
+
+  /* Deprecated shadow-token aliases kept so `shadow-[var(--shadow-blue)]`-style
+     literals still resolve during the transition — new code should use the
+     purple tokens above directly. */
+  --shadow-blue: var(--shadow-purple);
+  --shadow-blue-sm: var(--shadow-purple-sm);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: linear-gradient(180deg, var(--color-ice-blue) 0%, var(--color-gray-light) 320px);
+  background: var(--color-bg-app);
+  background-image:
+    radial-gradient(560px circle at 12% -8%, rgba(168, 85, 247, 0.16), transparent 60%),
+    radial-gradient(480px circle at 100% 8%, rgba(192, 38, 255, 0.1), transparent 55%),
+    radial-gradient(600px circle at 50% 100%, rgba(109, 40, 217, 0.12), transparent 60%);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Very subtle fixed grid texture, opt-in via .bg-grid — kept faint so it never fights with content */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(168, 85, 247, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
-  color: var(--color-heading-blue);
+  color: var(--color-text-primary);
 }
 
 ::selection {
-  background: var(--color-baby-blue);
-  color: var(--color-heading-blue);
+  background: var(--color-purple-dark);
+  color: #ffffff;
 }
 
 /* Consistent, visible keyboard focus ring app-wide (mouse users don't see it, :focus-visible handles that) */
 :focus-visible {
-  outline: 2px solid var(--color-button-blue);
+  outline: 2px solid var(--color-purple);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ---------- Decorative background: soft blurred blobs, used sparingly on hero/auth areas ---------- */
+/* ---------- Decorative background: soft blurred purple blobs, used sparingly on hero/auth areas ---------- */
 .bg-mesh {
   position: relative;
   isolation: isolate;
@@ -95,36 +130,36 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   z-index: -1;
   border-radius: 9999px;
-  filter: blur(60px);
-  opacity: 0.55;
+  filter: blur(70px);
+  opacity: 0.45;
   pointer-events: none;
 }
 .bg-mesh::before {
-  width: 380px;
-  height: 380px;
-  top: -140px;
-  right: -120px;
-  background: radial-gradient(circle, var(--color-baby-blue) 0%, transparent 70%);
+  width: 420px;
+  height: 420px;
+  top: -160px;
+  right: -140px;
+  background: radial-gradient(circle, var(--color-purple) 0%, transparent 70%);
 }
 .bg-mesh::after {
-  width: 300px;
-  height: 300px;
-  bottom: -120px;
-  left: -100px;
-  background: radial-gradient(circle, var(--color-mint) 0%, transparent 70%);
-  opacity: 0.35;
+  width: 340px;
+  height: 340px;
+  bottom: -140px;
+  left: -110px;
+  background: radial-gradient(circle, var(--color-purple-neon) 0%, transparent 70%);
+  opacity: 0.3;
 }
 
-/* Subtle dotted texture, opt-in via .bg-dots (kept very light so it never fights with content) */
+/* Subtle dotted texture, opt-in via .bg-dots (kept very faint so it never fights with content) */
 .bg-dots {
-  background-image: radial-gradient(var(--color-baby-blue) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(168, 85, 247, 0.35) 1px, transparent 1px);
   background-size: 22px 22px;
   background-position: -8px -8px;
 }
 
 /* ---------- Glass surfaces: used sparingly for nav / floating panels ---------- */
 .glass-surface {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(17, 17, 24, 0.72);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
@@ -160,7 +195,7 @@ h1, h2, h3, h4, h5, h6 {
   100% { background-position: 200% 0; }
 }
 .animate-shimmer {
-  background-image: linear-gradient(90deg, #eef3f7 25%, #f8fbfd 37%, #eef3f7 63%);
+  background-image: linear-gradient(90deg, #171720 25%, #22222e 37%, #171720 63%);
   background-size: 400% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
@@ -174,8 +209,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes success-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(120, 214, 176, 0.55); }
-  100% { box-shadow: 0 0 0 14px rgba(120, 214, 176, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(52, 211, 153, 0); }
 }
 .animate-success-pulse {
   animation: success-pulse 0.7s var(--ease-out-soft);
@@ -194,6 +229,15 @@ h1, h2, h3, h4, h5, h6 {
   animation: soft-drift 8s ease-in-out infinite;
 }
 
+/* Slow neon pulse for the logo mark — used sparingly (splash screen, auth hero) */
+@keyframes logo-pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.45)) drop-shadow(0 0 28px rgba(192, 38, 255, 0.18)); }
+  50% { filter: drop-shadow(0 0 22px rgba(168, 85, 247, 0.65)) drop-shadow(0 0 42px rgba(192, 38, 255, 0.3)); }
+}
+.animate-logo-pulse {
+  animation: logo-pulse-glow 3.2s ease-in-out infinite;
+}
+
 /* Respect the user's OS-level motion preference everywhere, not just in JS-driven animations */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -206,5 +250,5 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Scrollbar styling for a cleaner, on-brand look */
 * {
-  scrollbar-color: var(--color-baby-blue) transparent;
+  scrollbar-color: var(--color-purple-dark) transparent;
 }

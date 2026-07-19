@@ -111,8 +111,8 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
     <div className="space-y-6">
       <Reveal className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#183B56]">Gruppen</h1>
-          <p className="text-[#5b7a91] mt-1">Baut gemeinsam Routinen auf und feiert Fortschritte.</p>
+          <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Gruppen</h1>
+          <p className="text-[#C8C5D2] mt-1">Baut gemeinsam Routinen auf und feiert Fortschritte.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setJoinOpen(true)}>
@@ -153,14 +153,14 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
                     <DynamicIcon name={g.icon} className="h-5 w-5" style={{ color: g.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[#183B56] truncate">{g.name}</div>
-                    <div className="text-xs text-[#5b7a91] flex items-center gap-1">
+                    <div className="font-bold text-[#F8F7FC] truncate">{g.name}</div>
+                    <div className="text-xs text-[#C8C5D2] flex items-center gap-1">
                       {g.isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
                       {g.memberCount} Mitglieder · {g.role === "OWNER" ? "Besitzer" : g.role === "ADMIN" ? "Admin" : "Mitglied"}
                     </div>
                   </div>
                 </div>
-                {g.description && <p className="text-sm text-[#5b7a91] line-clamp-2">{g.description}</p>}
+                {g.description && <p className="text-sm text-[#C8C5D2] line-clamp-2">{g.description}</p>}
               </Card>
             </Link>
           ))}

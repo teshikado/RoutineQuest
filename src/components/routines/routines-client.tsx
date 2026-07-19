@@ -41,14 +41,14 @@ function RoutineCard({
           <DynamicIcon name={routine.icon} className="h-5 w-5" style={{ color: routine.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-[#183B56] truncate">{routine.title}</div>
-          <div className="text-xs text-[#5b7a91]">
+          <div className="font-bold text-[#F8F7FC] truncate">{routine.title}</div>
+          <div className="text-xs text-[#C8C5D2]">
             {catMeta.label} · <span style={{ color: diffMeta.color }}>{diffMeta.label} (+{diffMeta.xp} XP)</span>
           </div>
         </div>
       </div>
 
-      {routine.description && <p className="text-sm text-[#5b7a91]">{routine.description}</p>}
+      {routine.description && <p className="text-sm text-[#C8C5D2]">{routine.description}</p>}
 
       <div className="flex gap-1">
         {Object.entries(WEEKDAY_LABELS).map(([day, label]) => (
@@ -57,8 +57,8 @@ function RoutineCard({
             className={clsx(
               "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
               routine.scheduledDays.includes(Number(day))
-                ? "bg-[#4FA8D8] text-white"
-                : "bg-[#F5F7FA] text-[#c8d6e0]"
+                ? "bg-[#A855F7] text-white"
+                : "bg-[#171720] text-[#5F5B68]"
             )}
           >
             {label[0]}
@@ -66,27 +66,27 @@ function RoutineCard({
         ))}
       </div>
 
-      {routine.timeOfDay && <div className="text-xs text-[#5b7a91]">Uhrzeit: {routine.timeOfDay}</div>}
+      {routine.timeOfDay && <div className="text-xs text-[#C8C5D2]">Uhrzeit: {routine.timeOfDay}</div>}
 
-      <div className="flex justify-end gap-1 pt-1 border-t border-[#F5F7FA] mt-1">
+      <div className="flex justify-end gap-1 pt-1 border-t border-[#171720] mt-1">
         <button
           onClick={onEdit}
           aria-label="Bearbeiten"
-          className="p-2 rounded-lg text-[#5b7a91] hover:bg-[#EAF7FC] hover:text-[#4FA8D8]"
+          className="p-2 rounded-lg text-[#C8C5D2] hover:bg-[#171720] hover:text-[#A855F7]"
         >
           <Pencil className="h-4 w-4" />
         </button>
         <button
           onClick={onArchiveToggle}
           aria-label={routine.archived ? "Wiederherstellen" : "Archivieren"}
-          className="p-2 rounded-lg text-[#5b7a91] hover:bg-[#EAF7FC] hover:text-[#4FA8D8]"
+          className="p-2 rounded-lg text-[#C8C5D2] hover:bg-[#171720] hover:text-[#A855F7]"
         >
           {routine.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
         </button>
         <button
           onClick={onDelete}
           aria-label="Löschen"
-          className="p-2 rounded-lg text-[#5b7a91] hover:bg-[#FFF0EE] hover:text-[#FF8A80]"
+          className="p-2 rounded-lg text-[#C8C5D2] hover:bg-[#2A1219] hover:text-[#FB7185]"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -170,8 +170,8 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
     <div className="space-y-6">
       <Reveal className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#183B56]">Meine Routinen</h1>
-          <p className="text-[#5b7a91] mt-1">Verwalte deine wiederkehrenden Aufgaben und Gewohnheiten.</p>
+          <h1 className="text-2xl font-extrabold text-[#F8F7FC]">Meine Routinen</h1>
+          <p className="text-[#C8C5D2] mt-1">Verwalte deine wiederkehrenden Aufgaben und Gewohnheiten.</p>
         </div>
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="h-4 w-4" /> Neue Routine
@@ -183,7 +183,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
           onClick={() => setShowArchived(false)}
           className={clsx(
             "px-3 py-1.5 rounded-full text-sm font-semibold transition-colors",
-            !showArchived ? "bg-[#4FA8D8] text-white" : "bg-white text-[#5b7a91] border border-[#EAF7FC]"
+            !showArchived ? "bg-[#A855F7] text-white" : "bg-[#111118] text-[#C8C5D2] border border-[#292936]"
           )}
         >
           Aktiv ({routines.filter((r) => !r.archived).length})
@@ -192,7 +192,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
           onClick={() => setShowArchived(true)}
           className={clsx(
             "px-3 py-1.5 rounded-full text-sm font-semibold transition-colors",
-            showArchived ? "bg-[#4FA8D8] text-white" : "bg-white text-[#5b7a91] border border-[#EAF7FC]"
+            showArchived ? "bg-[#A855F7] text-white" : "bg-[#111118] text-[#C8C5D2] border border-[#292936]"
           )}
         >
           Archiviert ({routines.filter((r) => r.archived).length})

@@ -9,9 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { GroupRoutineLeaderboardRow } from "@/lib/group-routine-leaderboard";
 
 const MEDALS = [
-  { icon: Crown, color: "#FFD166", bg: "#FFF6DF" },
-  { icon: Shield, color: "#9db3c2", bg: "#F5F7FA" },
-  { icon: Star, color: "#CD7F32", bg: "#FBEEE3" },
+  { icon: Crown, color: "#FACC15", bg: "#2A2107" },
+  { icon: Shield, color: "#C0C0CE", bg: "#171720" },
+  { icon: Star, color: "#CD7F32", bg: "#2A1B10" },
 ];
 
 export function GroupRoutineLeaderboardPanel({
@@ -62,7 +62,7 @@ export function GroupRoutineLeaderboardPanel({
                 className="flex items-center gap-3 rounded-xl p-3"
                 style={{ backgroundColor: medal ? medal.bg : "transparent" }}
               >
-                <div className="w-6 text-center font-bold text-[#5b7a91] shrink-0">
+                <div className="w-6 text-center font-bold text-[#C8C5D2] shrink-0">
                   {medal ? <medal.icon className="h-5 w-5 mx-auto" style={{ color: medal.color }} /> : row.position}
                 </div>
                 <div
@@ -72,17 +72,17 @@ export function GroupRoutineLeaderboardPanel({
                   {row.avatarEmoji}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-[#183B56] truncate">{row.username}</div>
-                  <ProgressBar ratio={row.successRate ?? 0} colorClass="bg-[#78D6B0]" height="h-1.5" />
+                  <div className="text-sm font-semibold text-[#F8F7FC] truncate">{row.username}</div>
+                  <ProgressBar ratio={row.successRate ?? 0} colorClass="bg-[#34D399]" height="h-1.5" />
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-bold text-[#183B56]">
+                  <div className="text-sm font-bold text-[#F8F7FC]">
                     {row.successRate !== null ? `${Math.round(row.successRate * 100)}%` : "–"}
                   </div>
-                  <div className="text-[10px] text-[#5b7a91]">
+                  <div className="text-[10px] text-[#C8C5D2]">
                     {row.completedDays} Tage · {row.routineXp} XP
                   </div>
-                  <div className="text-[10px] text-[#5b7a91]">
+                  <div className="text-[10px] text-[#C8C5D2]">
                     🔥{row.currentStreak} · Rekord {row.longestStreak}
                   </div>
                 </div>

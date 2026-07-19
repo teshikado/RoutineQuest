@@ -198,10 +198,10 @@ export function DashboardClient({
       />
 
       <Reveal>
-        <h1 className="text-2xl font-extrabold text-[#183B56]">
+        <h1 className="text-2xl font-extrabold text-[#F8F7FC]">
           {greeting}, {data.user.username}!
         </h1>
-        <p className="text-[#5b7a91] mt-1">
+        <p className="text-[#C8C5D2] mt-1">
           {formatLongDateDe(today)} · Du hast heute bereits {doneCount} von {totalCount} Aufgaben erledigt.
           {progress.xpRemaining > 0 && ` Noch ${progress.xpRemaining} XP bis Level ${progress.level + 1}.`}
         </p>
@@ -212,40 +212,40 @@ export function DashboardClient({
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2.5">
               <RankBadge icon={rank.icon} color={rank.color} size="sm" />
-              <span className="font-bold text-[#183B56]">
+              <span className="font-bold text-[#F8F7FC]">
                 Level {progress.level} · {rank.name}
               </span>
             </div>
-            <span className="text-xs font-semibold text-[#5b7a91] tabular-nums">
+            <span className="text-xs font-semibold text-[#C8C5D2] tabular-nums">
               {progress.xpIntoLevel} / {progress.xpForNextLevel} XP
             </span>
           </div>
           <ProgressBar
             ratio={progress.progressRatio}
-            gradient="linear-gradient(90deg, #FFD166, #ffb84d)"
+            gradient="linear-gradient(90deg, #FACC15, #FDE68A)"
             shine
             height="h-3.5"
           />
-          <p className="text-xs text-[#5b7a91] mt-2">{rank.description}</p>
+          <p className="text-xs text-[#C8C5D2] mt-2">{rank.description}</p>
         </Card>
 
         <Card className="flex flex-col items-center justify-center text-center">
           <Flame
             className={clsx("h-8 w-8 mb-1", data.user.currentStreak > 0 && "animate-flame")}
-            style={{ color: data.user.currentStreak > 0 ? "#FFD166" : "#c8d6e0" }}
+            style={{ color: data.user.currentStreak > 0 ? "#FACC15" : "#5F5B68" }}
           />
-          <div className="text-2xl font-extrabold text-[#183B56] tabular-nums">{data.user.currentStreak}</div>
-          <div className="text-xs text-[#5b7a91]">Tage Streak · Rekord {data.user.longestStreak}</div>
+          <div className="text-2xl font-extrabold text-[#F8F7FC] tabular-nums">{data.user.currentStreak}</div>
+          <div className="text-xs text-[#C8C5D2]">Tage Streak · Rekord {data.user.longestStreak}</div>
         </Card>
       </RevealGroup>
 
       <Reveal delay={0.05}>
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#183B56]">Heute</h2>
-            <span className="text-sm font-semibold text-[#4FA8D8] tabular-nums">{Math.round(dayRatio * 100)}%</span>
+            <h2 className="font-bold text-[#F8F7FC]">Heute</h2>
+            <span className="text-sm font-semibold text-[#A855F7] tabular-nums">{Math.round(dayRatio * 100)}%</span>
           </div>
-          <ProgressBar ratio={dayRatio} className="mb-4" gradient="linear-gradient(90deg, #4FA8D8, #78D6B0)" />
+          <ProgressBar ratio={dayRatio} className="mb-4" gradient="linear-gradient(90deg, #A855F7, #34D399)" />
 
           {board.length === 0 && groupBoard.length === 0 ? (
             <EmptyState
@@ -276,10 +276,10 @@ export function DashboardClient({
       <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4" stagger={0.06}>
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#183B56]">Diese Woche</h2>
+            <h2 className="font-bold text-[#F8F7FC]">Diese Woche</h2>
             <Link
               href="/week"
-              className="text-xs font-semibold text-[#4FA8D8] flex items-center hover:underline underline-offset-2"
+              className="text-xs font-semibold text-[#A855F7] flex items-center hover:underline underline-offset-2"
             >
               Wochenplan <ChevronRight className="h-3.5 w-3.5" />
             </Link>
@@ -290,18 +290,18 @@ export function DashboardClient({
               const isToday = d.dateKey === todayKey;
               return (
                 <div key={d.dateKey} className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-[#9db3c2] font-semibold">{WEEKDAY_LABELS[i + 1]}</span>
+                  <span className="text-[10px] text-[#8D8998] font-semibold">{WEEKDAY_LABELS[i + 1]}</span>
                   <div
                     className={clsx(
                       "h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold transition-transform duration-200 hover:scale-110",
-                      isToday && "ring-2 ring-[#4FA8D8] ring-offset-1",
+                      isToday && "ring-2 ring-[#A855F7] ring-offset-1",
                       ratio === null
-                        ? "bg-[#F5F7FA] text-[#c8d6e0]"
+                        ? "bg-[#171720] text-[#5F5B68]"
                         : ratio >= 1
-                        ? "bg-[#78D6B0] text-white shadow-[var(--shadow-mint)]"
+                        ? "bg-[#34D399] text-[#052015] shadow-[var(--shadow-mint)]"
                         : ratio > 0
-                        ? "bg-[#FFD166] text-[#183B56]"
-                        : "bg-[#FFE0DC] text-[#e2564c]"
+                        ? "bg-[#FACC15] text-[#241a03]"
+                        : "bg-[#3B1420] text-[#FB7185]"
                     )}
                   >
                     {ratio === null ? "–" : `${d.done}/${d.scheduled}`}
@@ -314,10 +314,10 @@ export function DashboardClient({
 
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#183B56]">Gruppen</h2>
+            <h2 className="font-bold text-[#F8F7FC]">Gruppen</h2>
             <Link
               href="/groups"
-              className="text-xs font-semibold text-[#4FA8D8] flex items-center hover:underline underline-offset-2"
+              className="text-xs font-semibold text-[#A855F7] flex items-center hover:underline underline-offset-2"
             >
               Alle ansehen <ChevronRight className="h-3.5 w-3.5" />
             </Link>
@@ -341,7 +341,7 @@ export function DashboardClient({
                 <li key={g.id}>
                   <Link
                     href={`/groups/${g.id}`}
-                    className="flex items-center gap-3 rounded-xl p-2.5 hover:bg-[#F5F7FA] transition-all duration-200 hover:translate-x-0.5"
+                    className="flex items-center gap-3 rounded-xl p-2.5 hover:bg-[#171720] transition-all duration-200 hover:translate-x-0.5"
                   >
                     <div
                       className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
@@ -350,8 +350,8 @@ export function DashboardClient({
                       <DynamicIcon name={g.icon} className="h-4 w-4" style={{ color: g.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#183B56] truncate">{g.name}</div>
-                      <div className="text-xs text-[#5b7a91]">{g.memberCount} Mitglieder</div>
+                      <div className="text-sm font-semibold text-[#F8F7FC] truncate">{g.name}</div>
+                      <div className="text-xs text-[#C8C5D2]">{g.memberCount} Mitglieder</div>
                     </div>
                   </Link>
                 </li>

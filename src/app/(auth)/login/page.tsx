@@ -36,8 +36,8 @@ function LoginForm() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-[#183B56] mb-1">Willkommen zurück</h1>
-      <p className="text-sm text-[#5b7a91] mb-6">Melde dich an, um deine Routinen fortzusetzen.</p>
+      <h1 className="text-2xl font-bold text-[#F8F7FC] mb-1">Willkommen zurück</h1>
+      <p className="text-sm text-[#C8C5D2] mb-6">Melde dich an, um deine Routinen fortzusetzen.</p>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div>
@@ -54,7 +54,7 @@ function LoginForm() {
         <div>
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Passwort</Label>
-            <Link href="/forgot-password" className="text-xs text-[#4FA8D8] font-medium hover:underline mb-1.5">
+            <Link href="/forgot-password" className="text-xs text-[#A855F7] font-medium hover:underline mb-1.5">
               Passwort vergessen?
             </Link>
           </div>
@@ -73,9 +73,9 @@ function LoginForm() {
         </Button>
       </form>
 
-      <p className="text-sm text-center text-[#5b7a91] mt-6">
+      <p className="text-sm text-center text-[#C8C5D2] mt-6">
         Noch kein Konto?{" "}
-        <Link href="/register" className="text-[#4FA8D8] font-semibold hover:underline">
+        <Link href="/register" className="text-[#A855F7] font-semibold hover:underline">
           Jetzt registrieren
         </Link>
       </p>

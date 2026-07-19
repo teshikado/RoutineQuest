@@ -15,7 +15,7 @@ export function GroupSelector({
     <select
       value={selectedId}
       onChange={(e) => router.push(`/leaderboard?group=${e.target.value}`)}
-      className="rounded-xl border border-[#dbeaf3] bg-white px-3.5 py-2.5 text-sm font-semibold text-[#183B56] focus:outline-none focus:ring-2 focus:ring-[#4FA8D8]"
+      className="rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm font-semibold text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
     >
       {groups.map((g) => (
         <option key={g.id} value={g.id}>

@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user.onboarded) redirect("/onboarding");
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-screen">
       <Sidebar />
       <div className="md:pl-60 flex flex-col min-h-screen">
         <Topbar user={user} />

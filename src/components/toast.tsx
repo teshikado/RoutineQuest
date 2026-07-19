@@ -21,10 +21,10 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let toastId = 0;
 
 const VARIANT_STYLES: Record<ToastVariant, { bg: string; icon: React.ReactNode }> = {
-  xp: { bg: "bg-[#FFD166] text-[#183B56]", icon: <Sparkles className="h-5 w-5" /> },
-  success: { bg: "bg-[#78D6B0] text-[#183B56]", icon: <CheckCircle2 className="h-5 w-5" /> },
-  error: { bg: "bg-[#FF8A80] text-white", icon: <AlertTriangle className="h-5 w-5" /> },
-  info: { bg: "bg-[#4FA8D8] text-white", icon: <Info className="h-5 w-5" /> },
+  xp: { bg: "bg-[#FACC15] text-[#241a03]", icon: <Sparkles className="h-5 w-5" /> },
+  success: { bg: "bg-[#34D399] text-[#052015]", icon: <CheckCircle2 className="h-5 w-5" /> },
+  error: { bg: "bg-[#FB7185] text-white", icon: <AlertTriangle className="h-5 w-5" /> },
+  info: { bg: "bg-[#A855F7] text-white", icon: <Info className="h-5 w-5" /> },
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {

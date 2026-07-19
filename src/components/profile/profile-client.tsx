@@ -17,7 +17,7 @@ import { useToast } from "@/components/toast";
 import { getLevelProgress, getRankForLevel } from "@/lib/xp";
 
 const AVATAR_EMOJIS = ["🙂", "😄", "🚀", "🔥", "🌟", "🐱", "🐶", "🦉", "🌸", "🍀", "⚡", "🎯"];
-const AVATAR_COLORS = ["#4FA8D8", "#78D6B0", "#FFD166", "#FF8A80", "#A78BFA", "#F472B6"];
+const AVATAR_COLORS = ["#A855F7", "#34D399", "#FACC15", "#FB7185", "#A78BFA", "#F472B6"];
 
 type ProfileUser = {
   email: string;
@@ -120,7 +120,7 @@ function EditProfileModal({
                 aria-pressed={avatarEmoji === emoji}
                 className={clsx(
                   "h-9 w-9 rounded-full flex items-center justify-center text-lg border-2",
-                  avatarEmoji === emoji ? "border-[#4FA8D8] scale-110" : "border-transparent bg-[#F5F7FA]"
+                  avatarEmoji === emoji ? "border-[#A855F7] scale-110" : "border-transparent bg-[#171720]"
                 )}
               >
                 {emoji}
@@ -136,7 +136,7 @@ function EditProfileModal({
                 aria-pressed={avatarColor === color}
                 className={clsx(
                   "h-7 w-7 rounded-full border-2",
-                  avatarColor === color ? "border-[#183B56] scale-110" : "border-white"
+                  avatarColor === color ? "border-[#F8F7FC] scale-110" : "border-transparent"
                 )}
                 style={{ backgroundColor: color }}
               />
@@ -147,11 +147,11 @@ function EditProfileModal({
           <Label htmlFor="username">Benutzername</Label>
           <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
           {status === "available" && (
-            <p className="text-xs text-[#3fae7f] mt-1.5 flex items-center gap-1">
+            <p className="text-xs text-[#34D399] mt-1.5 flex items-center gap-1">
               <CheckCircle2 className="h-3.5 w-3.5" /> Verfügbar
             </p>
           )}
-          {status === "taken" && <p className="text-xs text-[#e2564c] mt-1.5">Bereits vergeben.</p>}
+          {status === "taken" && <p className="text-xs text-[#FB7185] mt-1.5">Bereits vergeben.</p>}
         </div>
         <FieldError>{error}</FieldError>
         <div className="flex justify-end gap-2">
@@ -187,8 +187,8 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
               {user.avatarEmoji}
             </div>
             <div className="flex-1 min-w-[180px]">
-              <h1 className="text-xl font-extrabold text-[#183B56]">{user.username}</h1>
-              <p className="text-sm text-[#5b7a91]">{user.email}</p>
+              <h1 className="text-xl font-extrabold text-[#F8F7FC]">{user.username}</h1>
+              <p className="text-sm text-[#C8C5D2]">{user.email}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <RankBadge icon={rank.icon} color={rank.color} size="sm" />
                 <span className="text-sm font-semibold" style={{ color: rank.color }}>
@@ -206,22 +206,22 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
       <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4" stagger={0.06}>
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <span className="font-bold text-[#183B56]">XP-Fortschritt</span>
-            <span className="text-xs font-semibold text-[#5b7a91] tabular-nums">
+            <span className="font-bold text-[#F8F7FC]">XP-Fortschritt</span>
+            <span className="text-xs font-semibold text-[#C8C5D2] tabular-nums">
               {progress.xpIntoLevel} / {progress.xpForNextLevel} XP
             </span>
           </div>
-          <ProgressBar ratio={progress.progressRatio} gradient="linear-gradient(90deg, #FFD166, #ffb84d)" shine height="h-3.5" />
-          <p className="text-xs text-[#5b7a91] mt-2">Noch {progress.xpRemaining} XP bis Level {progress.level + 1}.</p>
+          <ProgressBar ratio={progress.progressRatio} gradient="linear-gradient(90deg, #FACC15, #FDE68A)" shine height="h-3.5" />
+          <p className="text-xs text-[#C8C5D2] mt-2">Noch {progress.xpRemaining} XP bis Level {progress.level + 1}.</p>
         </Card>
         <Card className="flex items-center gap-4">
           <Flame
             className={clsx("h-9 w-9", user.currentStreak > 0 && "animate-flame")}
-            style={{ color: user.currentStreak > 0 ? "#FFD166" : "#c8d6e0" }}
+            style={{ color: user.currentStreak > 0 ? "#FACC15" : "#5F5B68" }}
           />
           <div>
-            <div className="font-extrabold text-[#183B56] tabular-nums">{user.currentStreak} Tage Streak</div>
-            <div className="text-xs text-[#5b7a91]">Rekord: {user.longestStreak} Tage</div>
+            <div className="font-extrabold text-[#F8F7FC] tabular-nums">{user.currentStreak} Tage Streak</div>
+            <div className="text-xs text-[#C8C5D2]">Rekord: {user.longestStreak} Tage</div>
           </div>
         </Card>
       </RevealGroup>
@@ -229,7 +229,7 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
       <Reveal delay={0.08}>
         <Card>
           <CardTitle className="flex items-center gap-2 mb-3">
-            <Award className="h-4 w-4 text-[#D69E22]" /> Abzeichen
+            <Award className="h-4 w-4 text-[#FACC15]" /> Abzeichen
           </CardTitle>
           {badges.length === 0 ? (
             <EmptyState
@@ -242,7 +242,7 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
               {badges.map((b) => (
                 <div
                   key={b.id}
-                  className="flex flex-col items-center text-center gap-1.5 rounded-xl p-3 bg-[#F5F7FA] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
+                  className="flex flex-col items-center text-center gap-1.5 rounded-xl p-3 bg-[#171720] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
                 >
                   <div
                     className="h-11 w-11 rounded-full flex items-center justify-center"
@@ -250,8 +250,8 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
                   >
                     <DynamicIcon name={b.icon} className="h-5 w-5" style={{ color: b.color }} />
                   </div>
-                  <span className="text-xs font-bold text-[#183B56]">{b.name}</span>
-                  <span className="text-[10px] text-[#5b7a91]">{b.description}</span>
+                  <span className="text-xs font-bold text-[#F8F7FC]">{b.name}</span>
+                  <span className="text-[10px] text-[#C8C5D2]">{b.description}</span>
                 </div>
               ))}
             </div>

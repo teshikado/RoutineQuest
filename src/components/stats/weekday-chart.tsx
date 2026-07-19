@@ -1,5 +1,5 @@
-const BLUE = "#4FA8D8";
-const MINT = "#3FAE7F";
+const BLUE = "#A855F7";
+const MINT = "#34D399";
 
 export function WeekdayChart({
   data,
@@ -15,7 +15,7 @@ export function WeekdayChart({
         const isBest = d.weekday === bestWeekday;
         return (
           <div key={d.weekday} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-            <span className="text-[10px] font-bold text-[#183B56]">
+            <span className="text-[10px] font-bold text-[#F8F7FC]">
               {d.ratio === null ? "–" : `${Math.round(pct * 100)}%`}
             </span>
             <div
@@ -27,7 +27,7 @@ export function WeekdayChart({
                 opacity: d.ratio === null ? 0.25 : 1,
               }}
             />
-            <span className="text-[10px] text-[#9db3c2] font-semibold">{d.label.slice(0, 2)}</span>
+            <span className="text-[10px] text-[#8D8998] font-semibold">{d.label.slice(0, 2)}</span>
           </div>
         );
       })}

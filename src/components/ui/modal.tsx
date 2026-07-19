@@ -34,7 +34,7 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="absolute inset-0 bg-[#183B56]/45 backdrop-blur-md" onClick={onClose} />
+          <div className="absolute inset-0 bg-[#050507]/75 backdrop-blur-md" onClick={onClose} />
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -43,14 +43,14 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${maxWidth} rounded-2xl bg-white shadow-[var(--shadow-xl)] p-6 max-h-[90vh] overflow-y-auto`}
+            className={`relative w-full ${maxWidth} rounded-2xl bg-[#111118] shadow-[var(--shadow-xl)] p-6 max-h-[90vh] overflow-y-auto`}
           >
             <div className="flex items-center justify-between mb-4">
-              {title && <h2 className="text-xl font-bold text-[#183B56]">{title}</h2>}
+              {title && <h2 className="text-xl font-bold text-[#F8F7FC]">{title}</h2>}
               <button
                 onClick={onClose}
                 aria-label="Schließen"
-                className="ml-auto rounded-full p-1.5 text-[#5b7a91] hover:bg-[#EAF7FC] hover:text-[#183B56] transition-colors"
+                className="ml-auto rounded-full p-1.5 text-[#C8C5D2] hover:bg-[#171720] hover:text-[#F8F7FC] transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
