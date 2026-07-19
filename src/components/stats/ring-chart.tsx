@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
-const MINT = "#3FAE7F";
+const MINT_FROM = "#5fc79c";
+const MINT_TO = "#3FAE7F";
 const TRACK = "#EAF7FC";
 
 export function RingChart({
@@ -14,6 +15,7 @@ export function RingChart({
   ratio: number;
   detail: string;
 }) {
+  const gradientId = useId();
   const [hover, setHover] = useState(false);
   const size = 120;
   const stroke = 12;
@@ -30,25 +32,31 @@ export function RingChart({
     >
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={MINT_FROM} />
+              <stop offset="100%" stopColor={MINT_TO} />
+            </linearGradient>
+          </defs>
           <circle cx={size / 2} cy={size / 2} r={radius} stroke={TRACK} strokeWidth={stroke} fill="none" />
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={MINT}
+            stroke={`url(#${gradientId})`}
             strokeWidth={stroke}
             fill="none"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 0.6s ease-out" }}
+            style={{ transition: "stroke-dashoffset 0.7s var(--ease-out-soft)" }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center flex-col">
-          <span className="text-xl font-extrabold text-[#183B56]">{Math.round(pct * 100)}%</span>
+          <span className="text-xl font-extrabold text-[#183B56] tabular-nums">{Math.round(pct * 100)}%</span>
         </div>
         {hover && (
-          <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#183B56] text-white text-xs px-2.5 py-1.5 shadow-lg z-10">
+          <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#183B56] text-white text-xs px-2.5 py-1.5 shadow-[var(--shadow-md)] z-10">
             {detail}
           </div>
         )}

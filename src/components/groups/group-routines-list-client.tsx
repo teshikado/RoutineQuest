@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DynamicIcon } from "@/components/ui/icon";
+import { Reveal, RevealGroup } from "@/components/ui/reveal";
+import { EmptyGroupsIllustration } from "@/components/ui/illustrations";
 import { GroupRoutineForm, type GroupRoutineFormValues } from "@/components/groups/group-routine-form";
 import { useToast } from "@/components/toast";
 import { CATEGORY_META, DIFFICULTY_META, WEEKDAY_LABELS } from "@/lib/constants";
@@ -46,7 +48,7 @@ function GroupRoutineCard({ routine, groupId }: { routine: GroupRoutineListItem;
 
   return (
     <Link href={`/groups/${groupId}/routines/${routine.id}`}>
-      <Card className="flex flex-col gap-3 h-full hover:shadow-[0_4px_20px_rgba(24,59,86,0.08)] transition-shadow">
+      <Card interactive className="flex flex-col gap-3 h-full">
         <div className="flex items-start gap-3">
           <div
             className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
@@ -138,11 +140,11 @@ function RoutineSection({
       {routines.length === 0 ? (
         <p className="text-sm text-[#9db3c2] mb-2">{emptyHint}</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" stagger={0.05}>
           {routines.map((routine) => (
             <GroupRoutineCard key={routine.id} routine={routine} groupId={groupId} />
           ))}
-        </div>
+        </RevealGroup>
       )}
     </div>
   );
@@ -216,7 +218,7 @@ export function GroupRoutinesListClient({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <Reveal className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div
             className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
@@ -234,11 +236,11 @@ export function GroupRoutinesListClient({
             <Plus className="h-4 w-4" /> Gruppenroutine erstellen
           </Button>
         )}
-      </div>
+      </Reveal>
 
       {routines.length === 0 ? (
         <EmptyState
-          icon="Users"
+          illustration={<EmptyGroupsIllustration className="w-full" />}
           title="Noch keine Gruppenroutinen"
           description="Der Gruppenanführer kann hier gemeinsame Routinen erstellen, an denen alle Mitglieder teilnehmen können."
           action={

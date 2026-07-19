@@ -11,6 +11,8 @@ import { Input, Label, FieldError } from "@/components/ui/input";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DynamicIcon } from "@/components/ui/icon";
+import { RankBadge } from "@/components/ui/rank-badge";
+import { Reveal, RevealGroup } from "@/components/ui/reveal";
 import { useToast } from "@/components/toast";
 import { getLevelProgress, getRankForLevel } from "@/lib/xp";
 
@@ -175,75 +177,87 @@ export function ProfileClient({ user: initialUser, badges }: { user: ProfileUser
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Card>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div
-            className="h-20 w-20 rounded-full flex items-center justify-center text-4xl shrink-0"
-            style={{ backgroundColor: user.avatarColor + "33" }}
-          >
-            {user.avatarEmoji}
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <h1 className="text-xl font-extrabold text-[#183B56]">{user.username}</h1>
-            <p className="text-sm text-[#5b7a91]">{user.email}</p>
-            <div className="flex items-center gap-1.5 mt-1 text-sm font-semibold" style={{ color: rank.color }}>
-              <DynamicIcon name={rank.icon} className="h-4 w-4" />
-              Level {progress.level} · {rank.name}
+      <Reveal>
+        <Card>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div
+              className="h-20 w-20 rounded-full flex items-center justify-center text-4xl shrink-0 shadow-[var(--shadow-sm)]"
+              style={{ backgroundColor: user.avatarColor + "33" }}
+            >
+              {user.avatarEmoji}
             </div>
+            <div className="flex-1 min-w-[180px]">
+              <h1 className="text-xl font-extrabold text-[#183B56]">{user.username}</h1>
+              <p className="text-sm text-[#5b7a91]">{user.email}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <RankBadge icon={rank.icon} color={rank.color} size="sm" />
+                <span className="text-sm font-semibold" style={{ color: rank.color }}>
+                  Level {progress.level} · {rank.name}
+                </span>
+              </div>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" /> Bearbeiten
+            </Button>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4" /> Bearbeiten
-          </Button>
-        </div>
-      </Card>
+        </Card>
+      </Reveal>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4" stagger={0.06}>
         <Card>
           <div className="flex items-center justify-between mb-2">
             <span className="font-bold text-[#183B56]">XP-Fortschritt</span>
-            <span className="text-xs text-[#5b7a91]">
+            <span className="text-xs font-semibold text-[#5b7a91] tabular-nums">
               {progress.xpIntoLevel} / {progress.xpForNextLevel} XP
             </span>
           </div>
-          <ProgressBar ratio={progress.progressRatio} colorClass="bg-[#FFD166]" />
+          <ProgressBar ratio={progress.progressRatio} gradient="linear-gradient(90deg, #FFD166, #ffb84d)" shine height="h-3.5" />
           <p className="text-xs text-[#5b7a91] mt-2">Noch {progress.xpRemaining} XP bis Level {progress.level + 1}.</p>
         </Card>
         <Card className="flex items-center gap-4">
-          <Flame className="h-9 w-9 text-[#FFD166]" />
+          <Flame
+            className={clsx("h-9 w-9", user.currentStreak > 0 && "animate-flame")}
+            style={{ color: user.currentStreak > 0 ? "#FFD166" : "#c8d6e0" }}
+          />
           <div>
-            <div className="font-extrabold text-[#183B56]">{user.currentStreak} Tage Streak</div>
+            <div className="font-extrabold text-[#183B56] tabular-nums">{user.currentStreak} Tage Streak</div>
             <div className="text-xs text-[#5b7a91]">Rekord: {user.longestStreak} Tage</div>
           </div>
         </Card>
-      </div>
+      </RevealGroup>
 
-      <Card>
-        <CardTitle className="flex items-center gap-2 mb-3">
-          <Award className="h-4 w-4 text-[#D69E22]" /> Abzeichen
-        </CardTitle>
-        {badges.length === 0 ? (
-          <EmptyState
-            icon="Award"
-            title="Noch keine Abzeichen"
-            description="Nimm an Gruppenroutinen teil, um digitale Abzeichen zu sammeln."
-          />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {badges.map((b) => (
-              <div key={b.id} className="flex flex-col items-center text-center gap-1.5 rounded-xl p-3 bg-[#F5F7FA]">
+      <Reveal delay={0.08}>
+        <Card>
+          <CardTitle className="flex items-center gap-2 mb-3">
+            <Award className="h-4 w-4 text-[#D69E22]" /> Abzeichen
+          </CardTitle>
+          {badges.length === 0 ? (
+            <EmptyState
+              icon="Award"
+              title="Noch keine Abzeichen"
+              description="Nimm an Gruppenroutinen teil, um digitale Abzeichen zu sammeln."
+            />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {badges.map((b) => (
                 <div
-                  className="h-11 w-11 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: b.color + "22" }}
+                  key={b.id}
+                  className="flex flex-col items-center text-center gap-1.5 rounded-xl p-3 bg-[#F5F7FA] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
                 >
-                  <DynamicIcon name={b.icon} className="h-5 w-5" style={{ color: b.color }} />
+                  <div
+                    className="h-11 w-11 rounded-full flex items-center justify-center"
+                    style={{ background: `radial-gradient(circle at 32% 28%, ${b.color}55, ${b.color}22 72%)` }}
+                  >
+                    <DynamicIcon name={b.icon} className="h-5 w-5" style={{ color: b.color }} />
+                  </div>
+                  <span className="text-xs font-bold text-[#183B56]">{b.name}</span>
+                  <span className="text-[10px] text-[#5b7a91]">{b.description}</span>
                 </div>
-                <span className="text-xs font-bold text-[#183B56]">{b.name}</span>
-                <span className="text-[10px] text-[#5b7a91]">{b.description}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      </Reveal>
 
       <EditProfileModal
         open={editOpen}

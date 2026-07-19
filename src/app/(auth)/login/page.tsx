@@ -68,8 +68,8 @@ function LoginForm() {
           />
         </div>
         <FieldError>{error}</FieldError>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Anmelden…" : "Anmelden"}
+        <Button type="submit" className="w-full" loading={loading}>
+          Anmelden
         </Button>
       </form>
 

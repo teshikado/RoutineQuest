@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { Topbar } from "@/components/nav/topbar";
+import { PageTransition } from "@/components/ui/page-transition";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -18,7 +19,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="md:pl-60 flex flex-col min-h-screen">
         <Topbar user={user} />
-        <main className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-8 max-w-6xl w-full mx-auto">{children}</main>
+        <main className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-8 max-w-6xl w-full mx-auto">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
       <BottomNav />
     </div>

@@ -10,6 +10,8 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DynamicIcon } from "@/components/ui/icon";
+import { Reveal, RevealGroup } from "@/components/ui/reveal";
+import { EmptyGroupsIllustration } from "@/components/ui/illustrations";
 import { GroupForm, type GroupFormValues } from "@/components/groups/group-form";
 import { useToast } from "@/components/toast";
 
@@ -107,7 +109,7 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <Reveal className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-[#183B56]">Gruppen</h1>
           <p className="text-[#5b7a91] mt-1">Baut gemeinsam Routinen auf und feiert Fortschritte.</p>
@@ -120,11 +122,11 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
             <Plus className="h-4 w-4" /> Neue Gruppe
           </Button>
         </div>
-      </div>
+      </Reveal>
 
       {groups.length === 0 ? (
         <EmptyState
-          icon="Users"
+          illustration={<EmptyGroupsIllustration className="w-full" />}
           title="Noch keine Gruppen"
           description="Erstelle eine eigene Gruppe oder tritt einer bestehenden Gruppe mit einem Einladungscode bei."
           action={
@@ -139,10 +141,10 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" stagger={0.05}>
           {groups.map((g) => (
             <Link key={g.id} href={`/groups/${g.id}`}>
-              <Card className="h-full hover:shadow-md transition-shadow">
+              <Card interactive className="h-full">
                 <div className="flex items-start gap-3 mb-2">
                   <div
                     className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
@@ -162,7 +164,7 @@ export function GroupsClient({ initialGroups }: { initialGroups: GroupSummary[] 
               </Card>
             </Link>
           ))}
-        </div>
+        </RevealGroup>
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neue Gruppe erstellen">

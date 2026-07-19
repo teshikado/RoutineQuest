@@ -47,10 +47,19 @@ export function ActivityHeatmap({ data }: { data: { date: string; count: number;
           </div>
         ))}
       </div>
-      <div className="h-6 text-xs text-[#5b7a91]">
-        {hovered
-          ? `${hovered.date}: ${hovered.count} von ${hovered.scheduled} Aufgaben erledigt`
-          : "Fahre über ein Feld für Details"}
+      <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
+        <div className="h-6 text-xs text-[#5b7a91]">
+          {hovered
+            ? `${hovered.date}: ${hovered.count} von ${hovered.scheduled} Aufgaben erledigt`
+            : "Fahre über ein Feld für Details"}
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-[#9db3c2]">
+          Weniger
+          {MINT_RAMP.map((color, i) => (
+            <span key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
+          ))}
+          Mehr
+        </div>
       </div>
     </div>
   );

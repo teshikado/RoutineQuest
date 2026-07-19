@@ -10,6 +10,8 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DynamicIcon } from "@/components/ui/icon";
+import { Reveal, RevealGroup } from "@/components/ui/reveal";
+import { EmptyRoutinesIllustration } from "@/components/ui/illustrations";
 import { RoutineForm, type RoutineFormValues } from "@/components/routines/routine-form";
 import { useToast } from "@/components/toast";
 import { CATEGORY_META, DIFFICULTY_META, WEEKDAY_LABELS } from "@/lib/constants";
@@ -30,7 +32,7 @@ function RoutineCard({
   const diffMeta = DIFFICULTY_META[routine.difficulty as Difficulty];
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card className="flex flex-col gap-3 transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-md)]">
       <div className="flex items-start gap-3">
         <div
           className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
@@ -166,7 +168,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <Reveal className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-[#183B56]">Meine Routinen</h1>
           <p className="text-[#5b7a91] mt-1">Verwalte deine wiederkehrenden Aufgaben und Gewohnheiten.</p>
@@ -174,7 +176,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="h-4 w-4" /> Neue Routine
         </Button>
-      </div>
+      </Reveal>
 
       <div className="flex gap-2">
         <button
@@ -200,6 +202,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
       {visible.length === 0 ? (
         <EmptyState
           icon={showArchived ? "Archive" : "Sparkles"}
+          illustration={!showArchived ? <EmptyRoutinesIllustration className="w-full" /> : undefined}
           title={showArchived ? "Keine archivierten Routinen" : "Noch keine Routinen"}
           description={
             showArchived
@@ -215,7 +218,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" stagger={0.05}>
           {visible.map((routine) => (
             <RoutineCard
               key={routine.id}
@@ -225,7 +228,7 @@ function RoutinesClientInner({ initialRoutines }: { initialRoutines: Routine[] }
               onDelete={() => setDeleting(routine)}
             />
           ))}
-        </div>
+        </RevealGroup>
       )}
 
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Neue Routine">

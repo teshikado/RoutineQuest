@@ -10,7 +10,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#EAF7FC] pb-[env(safe-area-inset-bottom)]">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-surface border-t border-[#EAF7FC] pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(24,59,86,0.06)]">
       <div className="grid grid-cols-5">
         {MOBILE_NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -18,12 +18,19 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={clsx(
-                "flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                "relative flex flex-col items-center justify-center gap-0.5 py-2.5 min-h-[52px] text-[11px] font-medium transition-colors duration-200",
                 active ? "text-[#4FA8D8]" : "text-[#9db3c2]"
               )}
             >
-              <DynamicIcon name={item.icon} className="h-5 w-5" />
+              <span
+                className={clsx(
+                  "absolute top-1 h-1 w-6 rounded-full bg-[#4FA8D8] transition-all duration-200",
+                  active ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                )}
+              />
+              <DynamicIcon name={item.icon} className={clsx("h-5 w-5 transition-transform duration-200", active && "scale-110")} />
               {item.label}
             </Link>
           );

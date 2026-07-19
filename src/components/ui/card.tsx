@@ -1,10 +1,15 @@
 import clsx from "clsx";
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function Card({
+  className,
+  interactive = false,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
     <div
       className={clsx(
-        "rounded-2xl bg-white border border-[#EAF7FC] shadow-[0_2px_12px_rgba(24,59,86,0.06)] p-5",
+        "rounded-2xl bg-white border border-[#EAF7FC] shadow-[var(--shadow-sm)] p-5 transition-all duration-300 ease-[var(--ease-out-soft)]",
+        interactive && "hover:-translate-y-1 hover:shadow-[var(--shadow-md)] hover:border-[#cfe9f6]",
         className
       )}
       {...props}

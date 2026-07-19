@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardTitle, CardSubtitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RingChart } from "@/components/stats/ring-chart";
 import { ActivityHeatmap } from "@/components/stats/activity-heatmap";
 import type { GroupRoutineStats, GroupRoutinePeriod } from "@/lib/group-routine-stats";
@@ -77,7 +78,14 @@ export function GroupRoutineStatsPanel({
       <CardSubtitle className="mb-4">{stats?.rangeLabel ?? "…"}</CardSubtitle>
 
       {loading || !stats ? (
-        <p className="text-sm text-[#5b7a91]">Lädt…</p>
+        <div className="space-y-4" role="status" aria-label="Auswertung wird geladen">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-16 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-44 rounded-xl" />
+        </div>
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

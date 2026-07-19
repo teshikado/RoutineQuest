@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { DynamicIcon } from "@/components/ui/icon";
+import { RankBadge } from "@/components/ui/rank-badge";
+import { Confetti } from "@/components/ui/confetti";
 import { getRankForLevel } from "@/lib/xp";
 
 export function LevelUpModal({
@@ -21,17 +22,25 @@ export function LevelUpModal({
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="max-w-sm">
-      <div className="text-center py-4">
+      <div className="relative text-center py-4">
+        <Confetti active={open} pieces={rankedUp ? 30 : 18} />
+
         <motion.div
           initial={{ scale: 0, rotate: -30 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 260, damping: 15 }}
-          className="h-20 w-20 rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg"
-          style={{ backgroundColor: rank.color + "33" }}
+          className="mx-auto mb-4 w-fit"
         >
-          <DynamicIcon name={rank.icon} className="h-10 w-10" style={{ color: rank.color }} />
+          <RankBadge icon={rank.icon} color={rank.color} size="xl" glow />
         </motion.div>
-        <h2 className="text-2xl font-extrabold text-[#183B56] mb-1">Level Up!</h2>
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.3 }}
+          className="text-2xl font-extrabold text-[#183B56] mb-1"
+        >
+          Level Up!
+        </motion.h2>
         <p className="text-[#5b7a91] mb-1">Du bist jetzt Level {level}.</p>
         {rankedUp && (
           <p className="font-bold mb-4" style={{ color: rank.color }}>

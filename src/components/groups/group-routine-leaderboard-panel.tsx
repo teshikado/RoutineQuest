@@ -5,6 +5,7 @@ import { Crown, Shield, Star } from "lucide-react";
 import { Card, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { GroupRoutineLeaderboardRow } from "@/lib/group-routine-leaderboard";
 
 const MEDALS = [
@@ -36,7 +37,19 @@ export function GroupRoutineLeaderboardPanel({
       <CardSubtitle className="mb-4">Wer zieht die Gruppenroutine am konsequentesten durch?</CardSubtitle>
 
       {!rows ? (
-        <p className="text-sm text-[#5b7a91]">Lädt…</p>
+        <div className="space-y-2" role="status" aria-label="Rangliste wird geladen">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl p-3">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-1/3" />
+                <Skeleton className="h-1.5 w-full" />
+              </div>
+              <Skeleton className="h-4 w-10" />
+            </div>
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState icon="Trophy" title="Noch keine Rangliste" description="Sobald Mitglieder teilnehmen und abhaken, erscheint hier die Rangliste." />
       ) : (

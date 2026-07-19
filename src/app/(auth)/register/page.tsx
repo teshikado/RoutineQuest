@@ -93,8 +93,8 @@ export default function RegisterPage() {
           />
         </div>
         <FieldError>{error}</FieldError>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Wird erstellt…" : "Registrieren"}
+        <Button type="submit" className="w-full" loading={loading}>
+          Registrieren
         </Button>
       </form>
 
