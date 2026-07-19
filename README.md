@@ -28,11 +28,17 @@ normal für unsignierte Installer, siehe Abschnitt
 
 ### macOS (MacBook & iMac — Apple Silicon und Intel)
 
-**[RoutineQuest-macOS.dmg herunterladen](https://github.com/teshikado/RoutineQuest/releases/latest/download/RoutineQuest-macOS.dmg)**
-(Universal Build — läuft nativ auf M1/M2/M3/M4 **und** auf älteren
-Intel-Macs, immer die neueste Version)
+Wähle die zu deinem Mac passende Datei (nicht sicher, welche? Apple-Menü →
+"Über diesen Mac" zeigt den Chip):
 
-1. `RoutineQuest-macOS.dmg` über den Link oben herunterladen.
+- **[RoutineQuest-macOS-Apple-Silicon.dmg](https://github.com/teshikado/RoutineQuest/releases/latest/download/RoutineQuest-macOS-Apple-Silicon.dmg)**
+  — für Macs mit M1, M2, M3, M4 oder neuer
+- **[RoutineQuest-macOS-Intel.dmg](https://github.com/teshikado/RoutineQuest/releases/latest/download/RoutineQuest-macOS-Intel.dmg)**
+  — für ältere Intel-Macs
+
+(Jeweils immer die neueste Version)
+
+1. Passende DMG-Datei über die Links oben herunterladen.
 2. DMG-Datei öffnen.
 3. RoutineQuest per Drag & Drop in den **Programme**-Ordner ziehen.
 4. RoutineQuest über den Programme-Ordner oder Launchpad starten.
@@ -157,20 +163,26 @@ unterstützt und kostenlos für dieses Projektvolumen reicht.
 
 ```powershell
 npm run dist:win     # dist/RoutineQuest-Setup.exe (NSIS-Installer)
-npm run dist:mac     # dist/RoutineQuest-macOS.dmg  (nur auf einem Mac möglich, s.u.)
+npm run dist:mac     # dist/RoutineQuest-macOS-Apple-Silicon.dmg + -Intel.dmg (nur auf einem Mac möglich, s.u.)
 ```
 
 `dist:win` erzeugt einen NSIS-Installer mit wählbarem Installationsverzeichnis,
-Desktop- und Startmenü-Verknüpfung. `dist:mac` erzeugt eine **Universal-DMG**
-(ein einziges `.app`, das nativ auf Apple Silicon *und* Intel läuft — kein
-separater Download je nach Prozessor nötig) mit Drag-and-Drop-Installation in
-den Programme-Ordner. Beide Dateinamen sind bewusst **ohne Versionsnummer**
-fest codiert (`artifactName` je Plattform in `package.json`), damit die
-dauerhaften Links `.../releases/latest/download/RoutineQuest-Setup.exe` bzw.
-`.../RoutineQuest-macOS.dmg` bei jeder neuen Version funktionieren, ohne dass
-Nutzer die Releases-Seite durchsuchen müssen. Da der Client jetzt nur die
-gehostete Seite lädt, sind beide Installer sehr klein (kein gebündelter
-Next.js-Server, kein Prisma).
+Desktop- und Startmenü-Verknüpfung. `dist:mac` erzeugt **zwei separate DMGs**
+(je eine für Apple Silicon/arm64 und Intel/x64) mit Drag-and-Drop-Installation
+in den Programme-Ordner. Ein einziger **Universal-Build** (ein `.app` für
+beide Prozessoren) wurde zuerst versucht, ist aber auf dem aktuellen
+`macos-latest`-GitHub-Actions-Runner beim Zusammenführen der beiden
+Architekturen wiederholt mit einem nicht code-signing-bezogenen Fehler
+abgestürzt — die zwei-Dateien-Lösung ist der im Auftrag vorgesehene Fallback
+für genau diesen Fall. Alle drei Dateinamen sind bewusst **ohne
+Versionsnummer** fest codiert (`artifactName` je Plattform in
+`package.json`), damit die dauerhaften Links
+`.../releases/latest/download/RoutineQuest-Setup.exe`,
+`.../RoutineQuest-macOS-Apple-Silicon.dmg` und
+`.../RoutineQuest-macOS-Intel.dmg` bei jeder neuen Version funktionieren,
+ohne dass Nutzer die Releases-Seite durchsuchen müssen. Da der Client jetzt
+nur die gehostete Seite lädt, sind alle Installer sehr klein (kein
+gebündelter Next.js-Server, kein Prisma).
 
 **Wichtig:** `dist:mac` kann electron-builder aus technischen Gründen
 **ausschließlich auf einem echten Mac** ausführen (DMG-Erstellung braucht
@@ -256,15 +268,16 @@ Secrets gesetzt sind, entfällt diese Warnung bei zukünftigen Releases.
 
 ## Automatische Releases (GitHub Actions)
 
-`.github/workflows/release.yml` baut bei jedem gepushten Tag `v*` **beide**
-Installer parallel (Windows auf `windows-latest`, macOS-Universal-DMG auf
-`macos-latest`) und veröffentlicht sie danach gemeinsam (nicht als Entwurf)
-in einem einzigen GitHub Release: `RoutineQuest-Setup.exe` +
-`RoutineQuest-macOS.dmg`, inkl. `latest.yml`/`latest-mac.yml` und
-`.blockmap`-Dateien, die `electron-updater` für Auto-Updates braucht.
-`owner`/`repo` in `package.json` unter `"build"."publish"` sind bereits auf
-dieses Repository (`teshikado/RoutineQuest`) eingestellt, hier ist nichts
-mehr zu tun.
+`.github/workflows/release.yml` baut bei jedem gepushten Tag `v*` **alle
+drei** Installer parallel (Windows auf `windows-latest`, die zwei
+macOS-DMGs auf `macos-latest`) und veröffentlicht sie danach gemeinsam
+(nicht als Entwurf) in einem einzigen GitHub Release: `RoutineQuest-Setup.exe`
++ `RoutineQuest-macOS-Apple-Silicon.dmg` + `RoutineQuest-macOS-Intel.dmg`,
+inkl. `latest.yml`/`latest-mac.yml` und `.blockmap`-Dateien (soweit
+electron-builder sie erzeugt), die `electron-updater` für Auto-Updates
+braucht. `owner`/`repo` in `package.json` unter `"build"."publish"` sind
+bereits auf dieses Repository (`teshikado/RoutineQuest`) eingestellt, hier
+ist nichts mehr zu tun.
 
 **Eine neue Version veröffentlichen:**
 
@@ -279,7 +292,7 @@ mehr zu tun.
    git tag v1.1.1
    git push origin v1.1.1
    ```
-4. GitHub Actions baut daraufhin automatisch beide Installer neu und
+4. GitHub Actions baut daraufhin automatisch alle drei Installer neu und
    veröffentlicht sie zusammen unter einem neuen GitHub Release (Tag
    `v1.1.1`). Kein zusätzliches Secret nötig — der Workflow nutzt das von
    GitHub automatisch bereitgestellte `GITHUB_TOKEN`.
@@ -288,8 +301,9 @@ mehr zu tun.
    selbst herunterladen. **Ausnahme:** unsignierte Mac-Apps (siehe oben) —
    dort kann der automatische Update-Schritt an Gatekeeper scheitern, dann
    hilft nur der manuelle Download der neuen DMG.
-6. Die Download-Links `.../releases/latest/download/RoutineQuest-Setup.exe`
-   und `.../RoutineQuest-macOS.dmg` (auf der Website und in diesem README)
+6. Die Download-Links `.../releases/latest/download/RoutineQuest-Setup.exe`,
+   `.../RoutineQuest-macOS-Apple-Silicon.dmg` und
+   `.../RoutineQuest-macOS-Intel.dmg` (auf der Website und in diesem README)
    zeigen automatisch immer auf die neueste Version, ohne dass irgendwo
    etwas angepasst werden muss.
 
@@ -327,7 +341,7 @@ braucht dann ggf. den manuellen DMG-Download.
 | `npm run electron` | Desktop-Hülle gegen die gehostete Produktions-URL |
 | `npm run icon` | Alle Icons (Windows, macOS, Web) aus `build/generate-icon.js` neu erzeugen |
 | `npm run dist:win` | Windows-Installer lokal bauen (`dist/RoutineQuest-Setup.exe`), ohne zu veröffentlichen |
-| `npm run dist:mac` | macOS-Installer lokal bauen (`dist/RoutineQuest-macOS.dmg`) — **nur auf einem Mac möglich** |
+| `npm run dist:mac` | macOS-Installer lokal bauen (`dist/RoutineQuest-macOS-Apple-Silicon.dmg` + `-Intel.dmg`) — **nur auf einem Mac möglich** |
 | `npx prisma studio` | Datenbank-Browser |
 | `npx prisma migrate dev --name <name>` | neue Migration lokal erstellen + anwenden |
 | `npx prisma migrate deploy` | vorhandene Migrationen anwenden (lokal oder Produktion) |

@@ -1,9 +1,10 @@
 name: Release Desktop Installers
 
-# Builds the Windows installer (RoutineQuest-Setup.exe) and the macOS
-# installer (RoutineQuest-macOS.dmg, a universal Apple Silicon + Intel
-# build) and publishes both to a single GitHub Release matching the pushed
-# tag. Push a tag like `v1.1.0` to trigger it:
+# Builds the Windows installer (RoutineQuest-Setup.exe) and two macOS
+# installers — RoutineQuest-macOS-Apple-Silicon.dmg (arm64) and
+# RoutineQuest-macOS-Intel.dmg (x64) — and publishes all three to a single
+# GitHub Release matching the pushed tag. Push a tag like `v1.1.0` to
+# trigger it:
 #
 #   git tag v1.1.0
 #   git push origin v1.1.0
@@ -15,6 +16,14 @@ name: Release Desktop Installers
 # steps) is deliberate: electron-builder's own GitHub publisher — and two
 # jobs racing to create/update the same release — are both known to create
 # duplicate/untagged releases when multiple files land at once.
+#
+# Why two separate mac DMGs instead of one universal build: a universal
+# (arm64+x64 merged) build was tried first and consistently failed during
+# electron-builder's binary-merge/codesign step on macos-latest with an
+# opaque "not a file" error, unrelated to code-signing config (reproduced
+# identically across multiple fix attempts). Building each architecture as
+# its own DMG skips that merge step entirely and is the documented fallback
+# for exactly this situation.
 
 on:
   push:
@@ -85,7 +94,7 @@ jobs:
         working-directory: electron
         run: npm ci
 
-      - name: "Build macOS installer (universal: Apple Silicon + Intel)"
+      - name: "Build macOS installers (Apple Silicon + Intel, separate DMGs)"
         run: npm run dist:mac
         env:
           # CSC_LINK/APPLE_* are all empty/unset unless the repo owner has
@@ -104,18 +113,38 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Verify installer filename
-        run: test -f "dist/RoutineQuest-macOS.dmg"
+      - name: Rename to the public filenames
+        # electron-builder's ${arch} placeholder produces "arm64"/"x64";
+        # renamed here to the clearer, user-facing names used on the website.
+        run: |
+          mv "dist/RoutineQuest-macOS-arm64.dmg" "dist/RoutineQuest-macOS-Apple-Silicon.dmg"
+          mv "dist/RoutineQuest-macOS-x64.dmg" "dist/RoutineQuest-macOS-Intel.dmg"
+
+      - name: Verify installer filenames
+        run: |
+          test -f "dist/RoutineQuest-macOS-Apple-Silicon.dmg"
+          test -f "dist/RoutineQuest-macOS-Intel.dmg"
 
       - name: Upload macOS build artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
           path: |
-            dist/RoutineQuest-macOS.dmg
-            dist/RoutineQuest-macOS.dmg.blockmap
-            dist/latest-mac.yml
+            dist/RoutineQuest-macOS-Apple-Silicon.dmg
+            dist/RoutineQuest-macOS-Intel.dmg
           if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload macOS update-metadata (best effort)
+        # electron-updater feed files/blockmaps — not required for the DMGs
+        # themselves to be valid downloads, so this step never fails the job.
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-update-metadata
+          path: |
+            dist/*.blockmap
+            dist/latest-mac.yml
+          if-no-files-found: ignore
           retention-days: 1
 
   publish:
@@ -134,7 +163,14 @@ jobs:
           name: macos-installer
           path: dist
 
-      - name: Publish GitHub Release
+      - name: Download macOS update-metadata (best effort)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: macos-update-metadata
+          path: dist
+
+      - name: Publish GitHub Release (required installers)
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -142,9 +178,20 @@ jobs:
           name: RoutineQuest ${{ github.ref_name }}
           files: |
             dist/RoutineQuest-Setup.exe
+            dist/RoutineQuest-macOS-Apple-Silicon.dmg
+            dist/RoutineQuest-macOS-Intel.dmg
+          fail_on_unmatched_files: true
+
+      - name: Attach update-metadata (best effort, missing files are fine)
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: RoutineQuest ${{ github.ref_name }}
+          files: |
             dist/RoutineQuest-Setup.exe.blockmap
             dist/latest.yml
-            dist/RoutineQuest-macOS.dmg
-            dist/RoutineQuest-macOS.dmg.blockmap
+            dist/*.blockmap
             dist/latest-mac.yml
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
