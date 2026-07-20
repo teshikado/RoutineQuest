@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday } from "./dates";
+import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday, zonedStartOfDayUtc } from "./dates";
 import { getLevelProgress, getRankForLevel } from "./xp";
 
 export async function getGroupLeaderboard(groupId: string, requestingUserId: string) {
@@ -39,7 +39,10 @@ export async function getGroupLeaderboard(groupId: string, requestingUserId: str
         if (isFutureDay(day)) continue;
         const weekday = isoWeekday(day);
         const dayRoutines = routines.filter(
-          (r) => r.scheduledDays.includes(weekday) && existedOn(r.createdAt, day) && (!r.archived || (r.archivedAt ? r.archivedAt > day : true))
+          (r) =>
+            r.scheduledDays.includes(weekday) &&
+            existedOn(r.createdAt, day) &&
+            (!r.archived || (r.archivedAt ? r.archivedAt > zonedStartOfDayUtc(day) : true))
         );
         scheduled += dayRoutines.length;
         done += dayRoutines.filter((r) =>

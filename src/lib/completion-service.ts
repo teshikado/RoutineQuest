@@ -1,7 +1,16 @@
 import type { Prisma, Routine } from "@prisma/client";
 import { prisma } from "./prisma";
 import { DIFFICULTY_META, STREAK_MIN_RATIO, XP_BONUS } from "./constants";
-import { addDaysUtc, dateKey, getWeekInfo, isFutureDay, isoWeekday, todayDateOnly, toDateOnly } from "./dates";
+import {
+  addDaysUtc,
+  dateKey,
+  getWeekInfo,
+  isFutureDay,
+  isoWeekday,
+  todayDateOnly,
+  toDateOnly,
+  zonedStartOfDayUtc,
+} from "./dates";
 import { getLevelProgress, getRankForLevel } from "./xp";
 import { notify } from "./notifications";
 
@@ -14,15 +23,18 @@ export class CompletionError extends Error {}
 
 async function getScheduledRoutines(tx: TxClient, userId: string, date: Date): Promise<Routine[]> {
   const weekday = isoWeekday(date);
-  const endOfDay = new Date(date.getTime() + 24 * 60 * 60 * 1000 - 1);
+  // Exclusive upper bound: local midnight starting the day *after* `date`, not UTC
+  // midnight — a routine created between local and UTC midnight (the 1-2h DST-dependent
+  // gap) must still count as existing on `date`.
+  const nextDayStart = zonedStartOfDayUtc(addDaysUtc(date, 1));
   const all = await tx.routine.findMany({
     where: {
       userId,
       scheduledDays: { has: weekday },
-      createdAt: { lte: endOfDay },
+      createdAt: { lt: nextDayStart },
     },
   });
-  return all.filter((r) => !r.archived || (r.archivedAt && r.archivedAt > date));
+  return all.filter((r) => !r.archived || (r.archivedAt && r.archivedAt > zonedStartOfDayUtc(date)));
 }
 
 async function getCompletedRoutineIds(tx: TxClient, userId: string, date: Date): Promise<Set<string>> {

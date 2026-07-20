@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { getDayBoard } from "./completion-service";
 import { getGroupRoutineDayBoard } from "./group-routine-data";
-import { dateKey, existedOn, getWeekInfo, isoWeekday, todayDateOnly } from "./dates";
+import { dateKey, existedOn, getWeekInfo, isoWeekday, todayDateOnly, zonedStartOfDayUtc } from "./dates";
 
 export async function getDashboardData(userId: string) {
   const today = todayDateOnly();
@@ -20,7 +20,10 @@ export async function getDashboardData(userId: string) {
   const weekMini = week.days.map((day) => {
     const weekday = isoWeekday(day);
     const scheduled = weekRoutines.filter(
-      (r) => r.scheduledDays.includes(weekday) && existedOn(r.createdAt, day) && (!r.archived || (r.archivedAt && r.archivedAt > day))
+      (r) =>
+        r.scheduledDays.includes(weekday) &&
+        existedOn(r.createdAt, day) &&
+        (!r.archived || (r.archivedAt && r.archivedAt > zonedStartOfDayUtc(day)))
     );
     const done = weekCompletions.filter(
       (c) => dateKey(c.date) === dateKey(day) && scheduled.some((r) => r.id === c.routineId)

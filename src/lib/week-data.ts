@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday, type WeekInfo } from "./dates";
+import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday, zonedStartOfDayUtc, type WeekInfo } from "./dates";
 import { getGroupRoutineWeekRows } from "./group-routine-data";
 
 export type DayStatus = "done" | "open" | "missed" | "not_scheduled";
@@ -35,7 +35,7 @@ export async function getWeekData(userId: string, weekOffset: number) {
         const weekday = isoWeekday(day);
         const scheduled = routine.scheduledDays.includes(weekday);
         const existedYet = existedOn(routine.createdAt, day);
-        const stillActive = !routine.archived || (routine.archivedAt ? routine.archivedAt > day : true);
+        const stillActive = !routine.archived || (routine.archivedAt ? routine.archivedAt > zonedStartOfDayUtc(day) : true);
 
         if (!scheduled || !existedYet || !stillActive) return "not_scheduled";
 

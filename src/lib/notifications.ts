@@ -1,6 +1,6 @@
 import type { Prisma, NotificationType } from "@prisma/client";
 import { prisma } from "./prisma";
-import { dateKey, getWeekInfo, isoWeekday, todayDateOnly } from "./dates";
+import { getWeekInfo, isoWeekday, todayDateOnly, zonedStartOfDayUtc } from "./dates";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -29,7 +29,6 @@ export async function notify(
  */
 export async function generateAmbientNotifications(userId: string) {
   const today = todayDateOnly();
-  const todayKey = dateKey(today);
   const weekday = isoWeekday(today);
 
   const alreadyToday = async (type: NotificationType) =>
@@ -37,7 +36,7 @@ export async function generateAmbientNotifications(userId: string) {
       where: {
         userId,
         type,
-        createdAt: { gte: new Date(`${todayKey}T00:00:00.000Z`) },
+        createdAt: { gte: zonedStartOfDayUtc(today) },
       },
     });
 

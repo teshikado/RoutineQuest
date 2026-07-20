@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday, todayDateOnly } from "./dates";
+import { addDaysUtc, dateKey, existedOn, getWeekInfo, isFutureDay, isoWeekday, todayDateOnly, zonedStartOfDayUtc } from "./dates";
 import { WEEKDAY_LABELS_LONG } from "./constants";
 
 const HISTORY_WINDOW_DAYS = 90;
@@ -22,7 +22,7 @@ export async function getStatsData(userId: string) {
       (r) =>
         r.scheduledDays.includes(weekday) &&
         existedOn(r.createdAt, day) &&
-        (!r.archived || (r.archivedAt ? r.archivedAt > day : true))
+        (!r.archived || (r.archivedAt ? r.archivedAt > zonedStartOfDayUtc(day) : true))
     );
   }
 
@@ -98,7 +98,7 @@ export async function getStatsData(userId: string) {
       const weekday = isoWeekday(d);
       if (!r.scheduledDays.includes(weekday)) continue;
       if (!existedOn(r.createdAt, d)) continue;
-      if (r.archived && r.archivedAt && r.archivedAt <= d) continue;
+      if (r.archived && r.archivedAt && r.archivedAt <= zonedStartOfDayUtc(d)) continue;
       scheduled += 1;
       if (completions.some((c) => c.routineId === r.id && dateKey(c.date) === dateKey(d))) done += 1;
     }
