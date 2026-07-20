@@ -12,7 +12,20 @@ type TxClient = Prisma.TransactionClient;
 const UNDO_WINDOW_MINUTES = 10;
 const STREAK_LOOKBACK_DAYS = 400;
 
-export class GroupRoutineCompletionError extends Error {}
+export type GroupRoutineCompletionErrorCode =
+  | "FUTURE_DAY"
+  | "NOT_FOUND"
+  | "NOT_JOINED"
+  | "NOT_SCHEDULED_TODAY"
+  | "UNDO_WINDOW_EXPIRED";
+
+export class GroupRoutineCompletionError extends Error {
+  code: GroupRoutineCompletionErrorCode;
+  constructor(message: string, code: GroupRoutineCompletionErrorCode) {
+    super(message);
+    this.code = code;
+  }
+}
 
 async function recomputeParticipantStreak(
   tx: TxClient,
@@ -87,24 +100,24 @@ export async function toggleGroupRoutineCompletion(
   date: Date
 ): Promise<GroupToggleResult> {
   if (isFutureDay(date)) {
-    throw new GroupRoutineCompletionError("Zukünftige Tage können noch nicht abgehakt werden.");
+    throw new GroupRoutineCompletionError("Zukünftige Tage können noch nicht abgehakt werden.", "FUTURE_DAY");
   }
 
   return prisma.$transaction(async (tx) => {
     const routine = await tx.groupRoutine.findUnique({ where: { id: groupRoutineId } });
     if (!routine || routine.deletedAt) {
-      throw new GroupRoutineCompletionError("Gruppenroutine nicht gefunden.");
+      throw new GroupRoutineCompletionError("Gruppenroutine nicht gefunden.", "NOT_FOUND");
     }
 
     const participant = await tx.groupRoutineParticipant.findUnique({
       where: { groupRoutineId_userId: { groupRoutineId, userId } },
     });
     if (!participant || participant.status !== "JOINED") {
-      throw new GroupRoutineCompletionError("Du nimmst an dieser Routine nicht teil.");
+      throw new GroupRoutineCompletionError("Du nimmst an dieser Routine nicht teil.", "NOT_JOINED");
     }
 
     if (!isGroupRoutinePlannedDay(routine, participant, date)) {
-      throw new GroupRoutineCompletionError("Diese Routine ist an diesem Tag nicht geplant.");
+      throw new GroupRoutineCompletionError("Diese Routine ist an diesem Tag nicht geplant.", "NOT_SCHEDULED_TODAY");
     }
 
     const userBefore = await tx.user.findUniqueOrThrow({ where: { id: userId } });
@@ -132,7 +145,8 @@ export async function toggleGroupRoutineCompletion(
       const ageMs = Date.now() - existing.createdAt.getTime();
       if (ageMs > UNDO_WINDOW_MINUTES * 60 * 1000) {
         throw new GroupRoutineCompletionError(
-          `Diese Erledigung kann nur innerhalb von ${UNDO_WINDOW_MINUTES} Minuten rückgängig gemacht werden.`
+          `Diese Erledigung kann nur innerhalb von ${UNDO_WINDOW_MINUTES} Minuten rückgängig gemacht werden.`,
+          "UNDO_WINDOW_EXPIRED"
         );
       }
       const relatedTx = await tx.xpTransaction.findUnique({

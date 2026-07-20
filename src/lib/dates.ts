@@ -50,7 +50,10 @@ function getZonedDateParts(instant: Date, timeZone: string) {
  * streaks, stats, weekday lookups, group-routine scheduling, ...) is timezone-correct. */
 export function toDateOnly(date: Date): Date {
   const { year, month, day } = getZonedDateParts(date, TIME_ZONE);
-  return new Date(Date.UTC(year, month, day));
+  // `month` from Intl.DateTimeFormat parts is 1-indexed (Jan=1); Date.UTC's month
+  // parameter is 0-indexed (Jan=0) — without the "-1" this silently shifts every
+  // calendar day one month into the future.
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 export function todayDateOnly(): Date {

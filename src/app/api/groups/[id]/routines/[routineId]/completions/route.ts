@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof GroupRoutineCompletionError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 400 });
     }
     throw err;
   }

@@ -19,7 +19,19 @@ type TxClient = Prisma.TransactionClient;
 const UNDO_WINDOW_MINUTES = 10;
 const STREAK_LOOKBACK_DAYS = 400;
 
-export class CompletionError extends Error {}
+export type CompletionErrorCode =
+  | "FUTURE_DAY"
+  | "NOT_FOUND"
+  | "NOT_SCHEDULED_TODAY"
+  | "UNDO_WINDOW_EXPIRED";
+
+export class CompletionError extends Error {
+  code: CompletionErrorCode;
+  constructor(message: string, code: CompletionErrorCode) {
+    super(message);
+    this.code = code;
+  }
+}
 
 async function getScheduledRoutines(tx: TxClient, userId: string, date: Date): Promise<Routine[]> {
   const weekday = isoWeekday(date);
@@ -192,16 +204,16 @@ export type ToggleResult = {
 
 export async function toggleCompletion(userId: string, routineId: string, date: Date): Promise<ToggleResult> {
   if (isFutureDay(date)) {
-    throw new CompletionError("Zukünftige Aufgaben können noch nicht abgehakt werden.");
+    throw new CompletionError("Zukünftige Aufgaben können noch nicht abgehakt werden.", "FUTURE_DAY");
   }
 
   return prisma.$transaction(async (tx) => {
     const routine = await tx.routine.findUnique({ where: { id: routineId } });
     if (!routine || routine.userId !== userId) {
-      throw new CompletionError("Routine nicht gefunden.");
+      throw new CompletionError("Routine nicht gefunden.", "NOT_FOUND");
     }
     if (!routine.scheduledDays.includes(isoWeekday(date))) {
-      throw new CompletionError("Diese Routine ist an diesem Tag nicht geplant.");
+      throw new CompletionError("Diese Routine ist an diesem Tag nicht geplant.", "NOT_SCHEDULED_TODAY");
     }
 
     const userBefore = await tx.user.findUniqueOrThrow({ where: { id: userId } });
@@ -230,7 +242,8 @@ export async function toggleCompletion(userId: string, routineId: string, date: 
       const ageMs = Date.now() - existing.createdAt.getTime();
       if (ageMs > UNDO_WINDOW_MINUTES * 60 * 1000) {
         throw new CompletionError(
-          `Diese Aufgabe kann nur innerhalb von ${UNDO_WINDOW_MINUTES} Minuten rückgängig gemacht werden.`
+          `Diese Aufgabe kann nur innerhalb von ${UNDO_WINDOW_MINUTES} Minuten rückgängig gemacht werden.`,
+          "UNDO_WINDOW_EXPIRED"
         );
       }
       const tx1 = await tx.xpTransaction.findUnique({

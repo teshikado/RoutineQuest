@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof CompletionError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 400 });
     }
     console.error(err);
     return NextResponse.json({ error: "Unerwarteter Fehler." }, { status: 500 });
