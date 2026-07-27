@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireUserId, isErrorResponse } from "@/lib/api-auth";
 import { quickAddEntrySchema } from "@/lib/validation";
-import { createStandaloneEntry, durationMinutes, DayPlanError } from "@/lib/dayplan-service";
+import { createStandaloneEntry, DayPlanError } from "@/lib/dayplan-service";
 import { DAYPLAN_CATEGORY_META } from "@/lib/dayplan-constants";
 
-function addMinutesToTime(time: string, minutes: number): string {
+/** Duration-based end time that correctly rolls into the next day instead of clamping at
+ * 23:59 -- "22:00 Uhr für 240 Minuten" must produce 02:00 the next day, not a truncated
+ * same-day block. */
+function addMinutes(time: string, minutes: number): { time: string; nextDay: boolean } {
   const [h, m] = time.split(":").map(Number);
-  const total = Math.min(23 * 60 + 59, h * 60 + m + minutes);
-  const hh = String(Math.floor(total / 60)).padStart(2, "0");
-  const mm = String(total % 60).padStart(2, "0");
-  return `${hh}:${mm}`;
+  const total = h * 60 + m + minutes;
+  const nextDay = total >= 24 * 60;
+  const minutesOfDay = total % (24 * 60);
+  return { time: `${String(Math.floor(minutesOfDay / 60)).padStart(2, "0")}:${String(minutesOfDay % 60).padStart(2, "0")}`, nextDay };
 }
 
 export async function POST(req: Request) {
@@ -22,10 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
   }
 
-  const endTime = addMinutesToTime(parsed.data.startTime, parsed.data.durationMinutes);
-  if (endTime <= parsed.data.startTime) {
-    return NextResponse.json({ error: "Die Dauer führt über Mitternacht hinaus. Bitte eine kürzere Dauer wählen.", code: "INVALID_TIME_RANGE" }, { status: 400 });
-  }
+  const { time: endTime, nextDay } = addMinutes(parsed.data.startTime, parsed.data.durationMinutes);
 
   try {
     const result = await createStandaloneEntry(userId, {
@@ -33,12 +33,13 @@ export async function POST(req: Request) {
       date: parsed.data.date,
       startTime: parsed.data.startTime,
       endTime,
+      endsNextDay: nextDay,
       category: "OTHER",
       priority: "NORMAL",
       color: DAYPLAN_CATEGORY_META.OTHER.color,
       icon: DAYPLAN_CATEGORY_META.OTHER.icon,
     });
-    return NextResponse.json({ ...result, durationMinutes: durationMinutes(parsed.data.startTime, endTime) }, { status: 201 });
+    return NextResponse.json({ ...result, durationMinutes: parsed.data.durationMinutes }, { status: 201 });
   } catch (err) {
     if (err instanceof DayPlanError) return NextResponse.json({ error: err.message, code: err.code }, { status: 400 });
     throw err;

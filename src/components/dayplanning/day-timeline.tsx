@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { EntryCard } from "./entry-card";
+import { EntryCard, type ContinuationSegment } from "./entry-card";
+import { entryDateKey } from "@/lib/dayplan-types";
 import type { DayPlanEntryDTO } from "@/lib/dayplan-types";
 
 const HOUR_HEIGHT = 64; // px per hour
@@ -34,20 +35,30 @@ function berlinNowMinutes(): number {
   return Number(map.hour) * 60 + Number(map.minute);
 }
 
+type PositionedEntry = { entry: DayPlanEntryDTO; segment: ContinuationSegment; startMinutes: number; endMinutes: number };
+
 export function DayTimeline({
   entries,
+  selectedDateKey,
   isToday,
   onToggle,
   onEdit,
   onCreateAt,
   onMove,
+  onDuplicate,
+  onDelete,
 }: {
+  /** All entries touching this day OR the day before/after (so both halves of an overnight
+   * block are available) -- filtering/splitting into segments happens inside this component. */
   entries: DayPlanEntryDTO[];
+  selectedDateKey: string;
   isToday: boolean;
   onToggle: (id: string) => void;
   onEdit: (entry: DayPlanEntryDTO) => void;
   onCreateAt: (startTime: string) => void;
   onMove: (entry: DayPlanEntryDTO, newStartTime: string) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
@@ -72,20 +83,40 @@ export function DayTimeline({
 
   const hours = useMemo(() => Array.from({ length: 25 }, (_, i) => i), []);
 
+  // Split each entry into the segment(s) that fall on `selectedDateKey`: a same-day block
+  // renders once ("full"); an overnight block renders as "start" (startTime->24:00) on its
+  // start day and "end" (00:00->endTime) on its end day -- both from the SAME row/id, never
+  // duplicated in the database, just displayed twice at most.
+  const positioned = useMemo<PositionedEntry[]>(() => {
+    const result: PositionedEntry[] = [];
+    for (const entry of entries) {
+      const startKey = entryDateKey(entry.date);
+      const endKey = entryDateKey(entry.endDate);
+      if (startKey === endKey && startKey === selectedDateKey) {
+        result.push({ entry, segment: "full", startMinutes: timeToMinutes(entry.startTime), endMinutes: timeToMinutes(entry.endTime) });
+      } else if (startKey === selectedDateKey) {
+        result.push({ entry, segment: "start", startMinutes: timeToMinutes(entry.startTime), endMinutes: 24 * 60 });
+      } else if (endKey === selectedDateKey) {
+        result.push({ entry, segment: "end", startMinutes: 0, endMinutes: timeToMinutes(entry.endTime) });
+      }
+    }
+    return result;
+  }, [entries, selectedDateKey]);
+
   const overlapIds = useMemo(() => {
     const ids = new Set<string>();
-    for (let i = 0; i < entries.length; i++) {
-      for (let j = i + 1; j < entries.length; j++) {
-        const a = entries[i];
-        const b = entries[j];
-        if (a.startTime < b.endTime && b.startTime < a.endTime) {
-          ids.add(a.id);
-          ids.add(b.id);
+    for (let i = 0; i < positioned.length; i++) {
+      for (let j = i + 1; j < positioned.length; j++) {
+        const a = positioned[i];
+        const b = positioned[j];
+        if (a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes) {
+          ids.add(a.entry.id);
+          ids.add(b.entry.id);
         }
       }
     }
     return ids;
-  }, [entries]);
+  }, [positioned]);
 
   function minuteFromClientY(clientY: number): number {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -108,11 +139,11 @@ export function DayTimeline({
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     const entryId = e.dataTransfer.getData("text/dayplan-entry-id");
-    const entry = entries.find((x) => x.id === entryId);
+    const found = positioned.find((x) => x.entry.id === entryId);
     setDragOverMinute(null);
-    if (!entry) return;
+    if (!found) return;
     const minute = minuteFromClientY(e.clientY);
-    onMove(entry, minutesToTime(minute));
+    onMove(found.entry, minutesToTime(minute));
   }
 
   return (
@@ -149,14 +180,12 @@ export function DayTimeline({
               </div>
             )}
 
-            {entries.map((entry) => {
-              const start = timeToMinutes(entry.startTime);
-              const end = timeToMinutes(entry.endTime);
-              const top = (start / 1440) * TOTAL_HEIGHT;
-              const height = Math.max(26, ((end - start) / 1440) * TOTAL_HEIGHT - 2);
+            {positioned.map(({ entry, segment, startMinutes, endMinutes }) => {
+              const top = (startMinutes / 1440) * TOTAL_HEIGHT;
+              const height = Math.max(26, ((endMinutes - startMinutes) / 1440) * TOTAL_HEIGHT - 2);
               return (
                 <motion.div
-                  key={entry.id}
+                  key={`${entry.id}-${segment}`}
                   data-entry-card
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -166,11 +195,14 @@ export function DayTimeline({
                 >
                   <EntryCard
                     entry={entry}
+                    segment={segment}
                     dense={height < 44}
                     compact={height < 44}
                     onToggle={onToggle}
                     onEdit={onEdit}
-                    draggable
+                    onDuplicate={onDuplicate}
+                    onDelete={onDelete}
+                    draggable={segment !== "end"}
                     onDragStart={(e, en) => e.dataTransfer.setData("text/dayplan-entry-id", en.id)}
                     overlapping={overlapIds.has(entry.id)}
                   />

@@ -12,8 +12,10 @@ export type DayPlanEntryDTO = {
   title: string;
   description: string | null;
   date: string;
+  endDate: string;
   startTime: string;
   endTime: string;
+  sortOrder: number;
   category: DayPlanEntryCategory;
   priority: DayPlanEntryPriority;
   status: DayPlanEntryStatus;

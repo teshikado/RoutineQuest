@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { Info } from "lucide-react";
+import { Info, Moon, Copy } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
@@ -11,11 +11,14 @@ import { DynamicIcon } from "@/components/ui/icon";
 import {
   DAYPLAN_CATEGORY_META,
   DAYPLAN_PRIORITY_META,
+  DAYPLAN_STATUS_META,
   DAYPLAN_COLORS,
   DAYPLAN_ICONS,
   REMINDER_OPTIONS,
 } from "@/lib/dayplan-constants";
 import { entryDateKey } from "@/lib/dayplan-types";
+import { formatDurationLabel } from "@/lib/dayplan-client-utils";
+import { dateKey, parseDateKey, addDaysUtc } from "@/lib/dates";
 import type { DayPlanEntryDTO, LinkableRoutine, LinkableGroupRoutine } from "@/lib/dayplan-types";
 import type { DayPlanEntryCategory, DayPlanEntryPriority } from "@prisma/client";
 
@@ -23,6 +26,7 @@ export type EntryFormValues = {
   title: string;
   description: string;
   date: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   category: DayPlanEntryCategory;
@@ -33,11 +37,25 @@ export type EntryFormValues = {
   link: string;
   notes: string;
   reminderMinutes: number | null;
+  status: "PLANNED" | "IN_PROGRESS" | "SKIPPED";
   linkedRoutineId: string | null;
   linkedGroupRoutineId: string | null;
 };
 
 const REMINDER_UNSUPPORTED = typeof window !== "undefined" && !("Notification" in window);
+const EDITABLE_STATUSES: Array<EntryFormValues["status"]> = ["PLANNED", "IN_PROGRESS", "SKIPPED"];
+
+function weekdayDate(dateKeyStr: string): string {
+  if (!dateKeyStr) return "";
+  return new Intl.DateTimeFormat("de-DE", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${dateKeyStr}T00:00:00.000Z`));
+}
+
+function combinedMinutes(dateKeyStr: string, time: string): number {
+  if (!dateKeyStr || !time) return 0;
+  const days = new Date(`${dateKeyStr}T00:00:00.000Z`).getTime() / 86400000;
+  const [h, m] = time.split(":").map(Number);
+  return days * 1440 + h * 60 + m;
+}
 
 export function EntryFormModal({
   open,
@@ -49,7 +67,9 @@ export function EntryFormModal({
   onCreate,
   onUpdate,
   onDelete,
+  onDuplicate,
   onMoveQuick,
+  onOpenPlan,
 }: {
   open: boolean;
   onClose: () => void;
@@ -61,7 +81,9 @@ export function EntryFormModal({
   onCreate: (values: EntryFormValues) => Promise<void>;
   onUpdate: (id: string, values: Partial<EntryFormValues>, scope: "THIS" | "FOLLOWING" | "ALL") => Promise<void>;
   onDelete: (id: string, scope: "THIS" | "FOLLOWING" | "ALL") => Promise<void>;
+  onDuplicate: (id: string, newDate: string) => Promise<void>;
   onMoveQuick: (id: string, minutesOrDate: { addMinutes?: number; toTomorrow?: boolean }, reason?: string) => Promise<void>;
+  onOpenPlan?: (dayPlanId: string) => void;
 }) {
   const isEdit = !!entry;
   const [values, setValues] = useState<EntryFormValues>(() => toValues(entry, defaultDate, defaultStartTime, defaultEndTime));
@@ -69,20 +91,24 @@ export function EntryFormModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [duplicateDate, setDuplicateDate] = useState("");
   const [linkables, setLinkables] = useState<{ routines: LinkableRoutine[]; groupRoutines: LinkableGroupRoutine[] } | null>(null);
   const [linkInfoShown, setLinkInfoShown] = useState(false);
+  const [midnightPromptDismissed, setMidnightPromptDismissed] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
     REMINDER_UNSUPPORTED ? "unsupported" : typeof window !== "undefined" ? Notification.permission : "default"
   );
 
   useEffect(() => {
     if (!open) return;
-    // Deferred: resetting form state must not happen synchronously within the effect body.
     const id = setTimeout(() => {
       setValues(toValues(entry, defaultDate, defaultStartTime, defaultEndTime));
       setScope("THIS");
       setError(null);
       setLinkInfoShown(false);
+      setMidnightPromptDismissed(false);
+      setShowDuplicate(false);
     }, 0);
     fetch("/api/dayplan-entries/linkable")
       .then((r) => r.json())
@@ -92,10 +118,29 @@ export function EntryFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, entry?.id]);
 
+  const endsNextDay = values.date && values.endDate && values.endDate > values.date;
+  // Auto-detected "probably meant overnight": same day chosen, but end clock-time is not
+  // after start clock-time -- almost certainly a midnight-crossing block, not a mistake.
+  const looksLikeMidnightCrossing = values.date && values.endDate === values.date && values.endTime && values.startTime && values.endTime <= values.startTime;
+  const durationMinutes = values.date && values.endDate ? combinedMinutes(values.endDate, values.endTime) - combinedMinutes(values.date, values.startTime) : 0;
+
   async function requestReminderPermission() {
     if (REMINDER_UNSUPPORTED) return;
     const result = await Notification.requestPermission();
     setNotificationPermission(result);
+  }
+
+  function applyNextDay() {
+    const d = parseDateKey(values.date);
+    setValues((v) => ({ ...v, endDate: dateKey(addDaysUtc(d, 1)) }));
+    setMidnightPromptDismissed(true);
+  }
+
+  function toggleEndsNextDay(checked: boolean) {
+    if (!values.date) return;
+    const d = parseDateKey(values.date);
+    setValues((v) => ({ ...v, endDate: checked ? dateKey(addDaysUtc(d, 1)) : values.date }));
+    setMidnightPromptDismissed(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,8 +150,20 @@ export function EntryFormModal({
       setError("Bitte gib einen Titel ein.");
       return;
     }
-    if (values.endTime <= values.startTime) {
-      setError("Die Endzeit muss nach der Startzeit liegen.");
+    if (!values.date) {
+      setError("Bitte wähle ein Startdatum.");
+      return;
+    }
+    if (!values.endDate) {
+      setError("Bitte wähle ein Enddatum.");
+      return;
+    }
+    if (looksLikeMidnightCrossing && !midnightPromptDismissed) {
+      setError("Die Endzeit liegt vor der Startzeit. Bestätige oben, ob der Zeitblock am nächsten Tag enden soll.");
+      return;
+    }
+    if (durationMinutes <= 0) {
+      setError("Das Ende muss nach dem Start liegen. Wähle bei einer Planung über Mitternacht den nächsten Tag als Enddatum.");
       return;
     }
     setLoading(true);
@@ -130,10 +187,28 @@ export function EntryFormModal({
     ? linkables?.groupRoutines.find((r) => r.id === values.linkedGroupRoutineId)?.title
     : null;
 
+  const previewLine = useMemo(() => {
+    if (!values.date || !values.endDate || !values.startTime || !values.endTime) return null;
+    const sameDay = values.date === values.endDate;
+    return sameDay
+      ? `${weekdayDate(values.date)}, ${values.startTime} Uhr bis ${values.endTime} Uhr`
+      : `${weekdayDate(values.date)}, ${values.startTime} Uhr bis ${weekdayDate(values.endDate)}, ${values.endTime} Uhr`;
+  }, [values.date, values.endDate, values.startTime, values.endTime]);
+
   return (
     <>
       <Modal open={open} onClose={onClose} title={isEdit ? "Zeitblock bearbeiten" : "Zeitblock erstellen"} maxWidth="max-w-lg">
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {isEdit && entry?.dayPlanId && onOpenPlan && (
+            <button
+              type="button"
+              onClick={() => onOpenPlan(entry.dayPlanId!)}
+              className="text-xs font-semibold text-[#A855F7] hover:underline underline-offset-2"
+            >
+              Zum vollständigen Tagesplan →
+            </button>
+          )}
+
           <div>
             <Label htmlFor="title">Titel</Label>
             <Input
@@ -158,20 +233,86 @@ export function EntryFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="date">Datum</Label>
-              <Input id="date" type="date" value={values.date} onChange={(e) => setValues((v) => ({ ...v, date: e.target.value }))} required />
+              <Label htmlFor="date">Startdatum</Label>
+              <Input
+                id="date"
+                type="date"
+                value={values.date}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setMidnightPromptDismissed(false);
+                  setValues((v) => ({ ...v, date: newDate, endDate: v.endDate && v.endDate >= newDate ? v.endDate : newDate }));
+                }}
+                required
+              />
             </div>
             <div>
-              <Label htmlFor="startTime">Start</Label>
-              <Input id="startTime" type="time" value={values.startTime} onChange={(e) => setValues((v) => ({ ...v, startTime: e.target.value }))} required />
+              <Label htmlFor="startTime">Startzeit</Label>
+              <Input id="startTime" type="time" value={values.startTime} onChange={(e) => { setMidnightPromptDismissed(false); setValues((v) => ({ ...v, startTime: e.target.value })); }} required />
             </div>
             <div>
-              <Label htmlFor="endTime">Ende</Label>
-              <Input id="endTime" type="time" value={values.endTime} onChange={(e) => setValues((v) => ({ ...v, endTime: e.target.value }))} required />
+              <Label htmlFor="endDate">Enddatum</Label>
+              <Input
+                id="endDate"
+                type="date"
+                min={values.date}
+                value={values.endDate}
+                onChange={(e) => { setMidnightPromptDismissed(true); setValues((v) => ({ ...v, endDate: e.target.value })); }}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="endTime">Endzeit</Label>
+              <Input id="endTime" type="time" value={values.endTime} onChange={(e) => { setMidnightPromptDismissed(false); setValues((v) => ({ ...v, endTime: e.target.value })); }} required />
             </div>
           </div>
+
+          <label className="flex items-center justify-between gap-2 rounded-xl border border-[#292936] px-3.5 py-2.5">
+            <span className="flex items-center gap-2 text-sm font-medium text-[#F8F7FC]">
+              <Moon className="h-4 w-4 text-[#A855F7]" /> Endet am nächsten Tag
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!endsNextDay}
+              onClick={() => toggleEndsNextDay(!endsNextDay)}
+              className={clsx("relative h-6 w-11 rounded-full shrink-0 transition-colors", endsNextDay ? "bg-[#A855F7]" : "bg-[#292936]")}
+            >
+              <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", endsNextDay ? "translate-x-5" : "translate-x-0.5")} />
+            </button>
+          </label>
+          {endsNextDay && values.endTime && (
+            <p className="text-xs text-[#C8C5D2] -mt-2">
+              Endet morgen um {values.endTime} Uhr.
+            </p>
+          )}
+
+          {looksLikeMidnightCrossing && !midnightPromptDismissed && (
+            <div className="rounded-xl border border-[#A855F7] bg-[#171720] p-3 space-y-2">
+              <p className="text-sm text-[#F8F7FC]">
+                Die Endzeit liegt vor der Startzeit. Soll der Zeitblock am nächsten Tag um {values.endTime} Uhr enden?
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" onClick={applyNextDay}>
+                  Ja, nächster Tag
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setMidnightPromptDismissed(true)}>
+                  Zeiten ändern
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {previewLine && (!looksLikeMidnightCrossing || midnightPromptDismissed) && (
+            <div className="rounded-xl bg-[#171720] px-3.5 py-2.5 text-sm">
+              <p className="text-[#F8F7FC] font-medium">{previewLine}</p>
+              <p className="text-[#A855F7] font-semibold text-xs mt-0.5">
+                {durationMinutes > 0 ? `Dauer: ${formatDurationLabel(durationMinutes)}` : "Ungültiger Zeitraum"}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -209,6 +350,25 @@ export function EntryFormModal({
               </select>
             </div>
           </div>
+
+          {isEdit && (
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                value={values.status}
+                onChange={(e) => setValues((v) => ({ ...v, status: e.target.value as EntryFormValues["status"] }))}
+                className="w-full rounded-xl border border-[#292936] bg-[#111118] px-3.5 py-2.5 text-sm text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
+              >
+                {EDITABLE_STATUSES.map((key) => (
+                  <option key={key} value={key}>
+                    {DAYPLAN_STATUS_META[key].label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-[#8D8998] mt-1.5">„Erledigt“ wird über den Haken auf der Karte gesetzt, nicht hier.</p>
+            </div>
+          )}
 
           <div>
             <Label>Icon</Label>
@@ -248,7 +408,7 @@ export function EntryFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="location">Ort oder Link (optional)</Label>
+              <Label htmlFor="location">Ort (optional)</Label>
               <Input id="location" value={values.location} onChange={(e) => setValues((v) => ({ ...v, location: e.target.value }))} maxLength={120} />
             </div>
             <div>
@@ -388,6 +548,30 @@ export function EntryFormModal({
             </div>
           )}
 
+          {isEdit && entry && !showDuplicate && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setDuplicateDate(entryDateKey(entry.date)); setShowDuplicate(true); }}>
+              <Copy className="h-3.5 w-3.5" /> Duplizieren
+            </Button>
+          )}
+          {isEdit && entry && showDuplicate && (
+            <div className="rounded-xl border border-[#292936] p-3 space-y-2">
+              <Label htmlFor="dup-date" className="mb-0">Neues Datum für die Kopie</Label>
+              <div className="flex gap-2">
+                <Input id="dup-date" type="date" value={duplicateDate} onChange={(e) => setDuplicateDate(e.target.value)} />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={async () => {
+                    await onDuplicate(entry.id, duplicateDate);
+                    onClose();
+                  }}
+                >
+                  Kopie erstellen
+                </Button>
+              </div>
+            </div>
+          )}
+
           <FieldError>{error}</FieldError>
 
           <div className="flex items-center justify-between gap-2 pt-2">
@@ -436,6 +620,7 @@ function toValues(entry?: DayPlanEntryDTO | null, defaultDate?: string, defaultS
       title: entry.title,
       description: entry.description ?? "",
       date: entryDateKey(entry.date),
+      endDate: entryDateKey(entry.endDate),
       startTime: entry.startTime,
       endTime: entry.endTime,
       category: entry.category,
@@ -446,6 +631,7 @@ function toValues(entry?: DayPlanEntryDTO | null, defaultDate?: string, defaultS
       link: entry.link ?? "",
       notes: entry.notes ?? "",
       reminderMinutes: entry.reminderMinutes,
+      status: entry.status === "DONE" || entry.status === "MOVED" ? "PLANNED" : entry.status,
       linkedRoutineId: entry.linkedRoutineId,
       linkedGroupRoutineId: entry.linkedGroupRoutineId,
     };
@@ -455,6 +641,7 @@ function toValues(entry?: DayPlanEntryDTO | null, defaultDate?: string, defaultS
     title: "",
     description: "",
     date: defaultDate ?? "",
+    endDate: defaultDate ?? "",
     startTime: defaultStartTime ?? "09:00",
     endTime: defaultEndTime ?? "10:00",
     category: "OTHER",
@@ -465,6 +652,7 @@ function toValues(entry?: DayPlanEntryDTO | null, defaultDate?: string, defaultS
     link: "",
     notes: "",
     reminderMinutes: null,
+    status: "PLANNED",
     linkedRoutineId: null,
     linkedGroupRoutineId: null,
   };

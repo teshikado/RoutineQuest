@@ -3,9 +3,10 @@ import { requireUserId, isErrorResponse } from "@/lib/api-auth";
 import { dayPlanEntryBaseSchema } from "@/lib/validation";
 import { addEntryToPlan, DayPlanError } from "@/lib/dayplan-service";
 
-// The entry template posted here has no `date` -- it applies to every date the parent
-// DayPlan's recurrence rule matches, not a single day.
-const bodySchema = dayPlanEntryBaseSchema.omit({ date: true });
+// The entry template posted here has no `date`/`endDate` -- it applies to every date the
+// parent DayPlan's recurrence rule matches, with `endsNextDay` deciding per-occurrence
+// whether the generated end day is the same as the start day or the one after.
+const bodySchema = dayPlanEntryBaseSchema.omit({ date: true, endDate: true });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
@@ -16,9 +17,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
-  }
-  if (parsed.data.endTime <= parsed.data.startTime) {
-    return NextResponse.json({ error: "Die Endzeit muss nach der Startzeit liegen.", code: "INVALID_TIME_RANGE" }, { status: 400 });
   }
 
   try {

@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { DAY_REVIEW_MOOD_META, DAYPLAN_ENTRY_XP } from "@/lib/dayplan-constants";
-import { formatDurationLabel, durationMinutes } from "@/lib/dayplan-client-utils";
+import { formatDurationLabel, durationMinutes, entryDurationMinutesClient } from "@/lib/dayplan-client-utils";
 import { useToast } from "@/components/toast";
 import type { DayPlanEntryDTO, DayReviewDTO } from "@/lib/dayplan-types";
 import type { DayReviewMood } from "@prisma/client";
@@ -15,7 +15,11 @@ export function DayStatsBar({ entries }: { entries: DayPlanEntryDTO[] }) {
   const done = entries.filter((e) => e.status === "DONE").length;
   const skipped = entries.filter((e) => e.status === "SKIPPED").length;
   const open = total - done - skipped;
-  const plannedMinutes = entries.reduce((sum, e) => sum + durationMinutes(e.startTime, e.endTime), 0);
+  // Full block duration, even for entries continuing past midnight -- a block "belongs" to
+  // its start day for progress purposes (see spec), so its whole duration counts there, not
+  // just the portion visible before 24:00. The plain same-day `durationMinutes(start, end)`
+  // string diff would go negative for an overnight block (e.g. "22:00"->"02:00" = -1200).
+  const plannedMinutes = entries.reduce((sum, e) => sum + entryDurationMinutesClient(e), 0);
   const freeMinutes = Math.max(0, 24 * 60 - plannedMinutes);
   const ratio = total > 0 ? done / total : 0;
 
@@ -25,9 +29,13 @@ export function DayStatsBar({ entries }: { entries: DayPlanEntryDTO[] }) {
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const cur = sorted[i];
+    // Only same-day-ending previous blocks are compared this way; a prev block that itself
+    // continues past midnight already has its own "Fortsetzung" indicator on the card, so
+    // skipping the gap heuristic for it (rather than computing a misleading gap) is safer.
+    if (prev.date !== prev.endDate) continue;
     const gapMinutes = durationMinutes(prev.endTime, cur.startTime);
-    const prevLong = durationMinutes(prev.startTime, prev.endTime) >= 90;
-    const curLong = durationMinutes(cur.startTime, cur.endTime) >= 90;
+    const prevLong = entryDurationMinutesClient(prev) >= 90;
+    const curLong = entryDurationMinutesClient(cur) >= 90;
     if (gapMinutes <= 0 && prevLong && curLong) {
       noBreaks = true;
       break;

@@ -6,18 +6,34 @@ import { Search } from "lucide-react";
 import { EntryCard } from "./entry-card";
 import { DAYPLAN_CATEGORY_META, DAYPLAN_STATUS_META } from "@/lib/dayplan-constants";
 import { entryDateKey } from "@/lib/dayplan-types";
+import { entryDurationMinutesClient, entrySpansMidnight, formatDurationLabel } from "@/lib/dayplan-client-utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { DayPlanEntryDTO } from "@/lib/dayplan-types";
 import type { DayPlanEntryCategory, DayPlanEntryStatus } from "@prisma/client";
+
+function weekdayDate(iso: string): string {
+  return new Intl.DateTimeFormat("de-DE", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
+}
+
+function rangeLabel(entry: DayPlanEntryDTO): string {
+  if (!entrySpansMidnight(entry)) {
+    return `${weekdayDate(entry.date)} · ${entry.startTime} Uhr bis ${entry.endTime} Uhr`;
+  }
+  return `${weekdayDate(entry.date)} · ${entry.startTime} Uhr bis ${weekdayDate(entry.endDate)} · ${entry.endTime} Uhr`;
+}
 
 export function ListView({
   entries,
   onToggle,
   onEdit,
+  onDuplicate,
+  onDelete,
 }: {
   entries: DayPlanEntryDTO[];
   onToggle: (id: string) => void;
   onEdit: (entry: DayPlanEntryDTO) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<DayPlanEntryCategory | "ALL">("ALL");
@@ -103,7 +119,10 @@ export function ListView({
               <h3 className={clsx("text-xs font-bold uppercase tracking-wide mb-2 text-[#8D8998]")}>{dateKey}</h3>
               <div className="space-y-2">
                 {dayEntries.map((entry) => (
-                  <EntryCard key={entry.id} entry={entry} onToggle={onToggle} onEdit={onEdit} />
+                  <div key={entry.id}>
+                    <EntryCard entry={entry} onToggle={onToggle} onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} dateRangeLabel={rangeLabel(entry)} />
+                    <p className="text-[10px] text-[#8D8998] mt-0.5 ml-3.5">Dauer: {formatDurationLabel(entryDurationMinutesClient(entry))}</p>
+                  </div>
                 ))}
               </div>
             </div>

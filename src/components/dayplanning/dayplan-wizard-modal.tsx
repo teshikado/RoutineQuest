@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Moon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
@@ -23,6 +23,7 @@ type BlockDraft = {
   title: string;
   startTime: string;
   endTime: string;
+  endsNextDay: boolean;
   category: DayPlanEntryCategory;
 };
 
@@ -64,7 +65,7 @@ export function DayPlanWizardModal({
   const [icon, setIcon] = useState("CalendarClock");
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderMinutes, setReminderMinutes] = useState(15);
-  const [blocks, setBlocks] = useState<BlockDraft[]>([{ title: "", startTime: "09:00", endTime: "10:00", category: "OTHER" }]);
+  const [blocks, setBlocks] = useState<BlockDraft[]>([{ title: "", startTime: "09:00", endTime: "10:00", endsNextDay: false, category: "OTHER" }]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -97,8 +98,8 @@ export function DayPlanWizardModal({
     }
     const validBlocks = blocks.filter((b) => b.title.trim());
     for (const b of validBlocks) {
-      if (b.endTime <= b.startTime) {
-        setError(`„${b.title}“: Die Endzeit muss nach der Startzeit liegen.`);
+      if (!b.endsNextDay && b.endTime <= b.startTime) {
+        setError(`„${b.title}“: Die Endzeit muss nach der Startzeit liegen, oder aktiviere „Endet am nächsten Tag“.`);
         return;
       }
     }
@@ -125,6 +126,7 @@ export function DayPlanWizardModal({
               date: startDate, // ignored by the API for plan-scoped entries; kept for schema shape
               startTime: b.startTime,
               endTime: b.endTime,
+              endsNextDay: b.endsNextDay,
               category: b.category,
               priority: "NORMAL",
               color: meta.color,
@@ -286,29 +288,42 @@ export function DayPlanWizardModal({
         <div>
           <div className="flex items-center justify-between mb-2">
             <Label className="mb-0">Zeitblöcke</Label>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setBlocks((b) => [...b, { title: "", startTime: "09:00", endTime: "10:00", category: "OTHER" }])}>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setBlocks((b) => [...b, { title: "", startTime: "09:00", endTime: "10:00", endsNextDay: false, category: "OTHER" }])}>
               <Plus className="h-3.5 w-3.5" /> Block
             </Button>
           </div>
           <div className="space-y-2">
             {blocks.map((b, i) => (
-              <div key={i} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 items-center">
-                <Input value={b.title} onChange={(e) => updateBlock(i, { title: e.target.value })} placeholder="z. B. Sport" maxLength={60} />
-                <Input type="time" value={b.startTime} onChange={(e) => updateBlock(i, { startTime: e.target.value })} className="w-[100px]" />
-                <Input type="time" value={b.endTime} onChange={(e) => updateBlock(i, { endTime: e.target.value })} className="w-[100px]" />
-                <select
-                  value={b.category}
-                  onChange={(e) => updateBlock(i, { category: e.target.value as DayPlanEntryCategory })}
-                  className="rounded-xl border border-[#292936] bg-[#111118] px-2 py-2.5 text-xs text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
+              <div key={i} className="space-y-1">
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 items-center">
+                  <Input value={b.title} onChange={(e) => updateBlock(i, { title: e.target.value })} placeholder="z. B. Sport" maxLength={60} />
+                  <Input type="time" value={b.startTime} onChange={(e) => updateBlock(i, { startTime: e.target.value })} className="w-[100px]" />
+                  <Input type="time" value={b.endTime} onChange={(e) => updateBlock(i, { endTime: e.target.value })} className="w-[100px]" />
+                  <select
+                    value={b.category}
+                    onChange={(e) => updateBlock(i, { category: e.target.value as DayPlanEntryCategory })}
+                    className="rounded-xl border border-[#292936] bg-[#111118] px-2 py-2.5 text-xs text-[#F8F7FC] focus:outline-none focus:ring-2 focus:ring-[#A855F7]"
+                  >
+                    {Object.entries(DAYPLAN_CATEGORY_META).map(([key, meta]) => (
+                      <option key={key} value={key}>
+                        {meta.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setBlocks((prev) => prev.filter((_, idx) => idx !== i))} className="h-9 w-9 rounded-lg flex items-center justify-center text-[#8D8998] hover:text-[#FB7185] hover:bg-[#171720]" aria-label="Block entfernen">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateBlock(i, { endsNextDay: !b.endsNextDay })}
+                  aria-pressed={b.endsNextDay}
+                  className={clsx(
+                    "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-colors",
+                    b.endsNextDay ? "text-[#A855F7]" : "text-[#5F5B68] hover:text-[#8D8998]"
+                  )}
                 >
-                  {Object.entries(DAYPLAN_CATEGORY_META).map(([key, meta]) => (
-                    <option key={key} value={key}>
-                      {meta.label}
-                    </option>
-                  ))}
-                </select>
-                <button type="button" onClick={() => setBlocks((prev) => prev.filter((_, idx) => idx !== i))} className="h-9 w-9 rounded-lg flex items-center justify-center text-[#8D8998] hover:text-[#FB7185] hover:bg-[#171720]" aria-label="Block entfernen">
-                  <Trash2 className="h-4 w-4" />
+                  <Moon className="h-3 w-3" /> Endet am nächsten Tag
                 </button>
               </div>
             ))}

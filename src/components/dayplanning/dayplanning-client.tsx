@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, Plus, Zap, LayoutTemplate, CalendarClock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Zap, LayoutTemplate, CalendarClock, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyDayPlanIllustration } from "@/components/ui/illustrations";
@@ -14,9 +14,12 @@ import { EntryFormModal, type EntryFormValues } from "./entry-form-modal";
 import { DayPlanWizardModal } from "./dayplan-wizard-modal";
 import { QuickAddModal } from "./quick-add-modal";
 import { TemplatesPanel } from "./templates-panel";
+import { DayPlanManageModal } from "./dayplan-manage-modal";
 import { DayStatsBar, DaySummaryReview } from "./day-summary";
 import { dateKey, todayDateOnly, addDaysUtc, getWeekInfo, formatLongDateDe, parseDateKey, isoWeekday } from "@/lib/dates";
 import { entryDateKey } from "@/lib/dayplan-types";
+import { daySegmentsForEntry } from "@/lib/dayplan-client-utils";
+import type { ContinuationSegment } from "./entry-card";
 import type { DayPlanEntryDTO } from "@/lib/dayplan-types";
 
 type View = "day" | "week" | "list";
@@ -25,6 +28,22 @@ function addMinutesClamped(time: string, minutes: number): string {
   const [h, m] = time.split(":").map(Number);
   const total = Math.max(0, Math.min(23 * 60 + 59, h * 60 + m + minutes));
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Combined (date, "HH:mm") -> minutes-since-epoch-day, mirroring the server-side helper in
+ * dayplan-service.ts, used here only to roll a quick "+X minutes" move across midnight. */
+function combinedMinutes(dateKeyStr: string, time: string): number {
+  const days = new Date(`${dateKeyStr}T00:00:00.000Z`).getTime() / 86400000;
+  const [h, m] = time.split(":").map(Number);
+  return days * 1440 + h * 60 + m;
+}
+function fromCombinedMinutes(total: number): { date: string; time: string } {
+  const days = Math.floor(total / 1440);
+  const minutesOfDay = total - days * 1440;
+  return {
+    date: dateKey(new Date(days * 86400000)),
+    time: `${String(Math.floor(minutesOfDay / 60)).padStart(2, "0")}:${String(minutesOfDay % 60).padStart(2, "0")}`,
+  };
 }
 
 export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: boolean }) {
@@ -40,6 +59,8 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
   const [wizardOpen, setWizardOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [managePlanId, setManagePlanId] = useState<string | null>(null);
 
   const week = useMemo(() => getWeekInfo(parseDateKey(selectedDateKey)), [selectedDateKey]);
 
@@ -91,13 +112,23 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
     return () => timers.forEach(clearTimeout);
   }, [entries, todayKey]);
 
-  const dayEntries = useMemo(() => entries.filter((e) => entryDateKey(e.date) === selectedDateKey), [entries, selectedDateKey]);
+  // Entries that TOUCH the selected day (start on it, end on it, or -- for the timeline --
+  // both), used for the timeline's split "start"/"end" rendering.
+  const dayTouchingEntries = useMemo(
+    () => entries.filter((e) => entryDateKey(e.date) <= selectedDateKey && entryDateKey(e.endDate) >= selectedDateKey),
+    [entries, selectedDateKey]
+  );
+  // Entries that BELONG to the selected day for progress/stats purposes -- a block counts
+  // once, on its start day, never twice (see spec: "gehört der Zeitblock hauptsächlich zum
+  // Starttag").
+  const dayOwnedEntries = useMemo(() => entries.filter((e) => entryDateKey(e.date) === selectedDateKey), [entries, selectedDateKey]);
 
   const entriesByDay = useMemo(() => {
-    const map: Record<string, DayPlanEntryDTO[]> = {};
+    const map: Record<string, Array<{ entry: DayPlanEntryDTO; segment: ContinuationSegment }>> = {};
     for (const e of entries) {
-      const k = entryDateKey(e.date);
-      (map[k] ??= []).push(e);
+      for (const { dayKey, segment } of daySegmentsForEntry(e)) {
+        (map[dayKey] ??= []).push({ entry: e, segment });
+      }
     }
     return map;
   }, [entries]);
@@ -121,7 +152,7 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
     const res = await fetch("/api/dayplan-entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, description: values.description || null, location: values.location || null, link: values.link || null, notes: values.notes || null }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Konnte nicht erstellt werden.");
@@ -145,7 +176,7 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
     showToast(data.skippedPast > 0 ? `Gespeichert. ${data.skippedPast} vergangene Termine wurden nicht verändert.` : "Gespeichert.", "success");
   }
 
-  async function handleDelete(id: string, scope: "THIS" | "FOLLOWING" | "ALL") {
+  async function handleDelete(id: string, scope: "THIS" | "FOLLOWING" | "ALL" = "THIS") {
     const res = await fetch(`/api/dayplan-entries/${id}?scope=${scope}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
@@ -156,29 +187,43 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
     showToast(data.skippedPast > 0 ? `Gelöscht. ${data.skippedPast} vergangene Termine bleiben erhalten.` : "Gelöscht.", "info");
   }
 
+  async function handleDuplicate(id: string, newDate?: string) {
+    const res = await fetch(`/api/dayplan-entries/${id}/duplicate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDate ? { date: newDate } : {}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error ?? "Konnte nicht dupliziert werden.", "error");
+      return;
+    }
+    await fetchEntries();
+    showToast("Zeitblock dupliziert.", "success");
+  }
+
   async function handleMoveTime(entry: DayPlanEntryDTO, newStartTime: string) {
-    const [sh, sm] = entry.startTime.split(":").map(Number);
-    const [eh, em] = entry.endTime.split(":").map(Number);
-    const duration = eh * 60 + em - (sh * 60 + sm);
-    const newEndTime = addMinutesClamped(newStartTime, duration);
-    await performMove(entry.id, { date: entryDateKey(entry.date), startTime: newStartTime, endTime: newEndTime });
+    // Same-day drag within the day timeline: keep the entry's own start day, let the server
+    // preserve the original duration (handles a crossing-midnight block correctly too).
+    await performMove(entry.id, { date: entryDateKey(entry.date), startTime: newStartTime });
   }
 
   async function handleMoveToDay(entry: DayPlanEntryDTO, newDateKey: string) {
-    await performMove(entry.id, { date: newDateKey, startTime: entry.startTime, endTime: entry.endTime });
+    await performMove(entry.id, { date: newDateKey, startTime: entry.startTime });
   }
 
   async function handleMoveQuick(id: string, delta: { addMinutes?: number; toTomorrow?: boolean }) {
-    const entry = entries.find((e) => e.id === id) ?? dayEntries.find((e) => e.id === id);
+    const entry = entries.find((e) => e.id === id);
     if (!entry) return;
     if (delta.addMinutes) {
-      await handleMoveTime(entry, addMinutesClamped(entry.startTime, delta.addMinutes));
+      const resolved = fromCombinedMinutes(combinedMinutes(entryDateKey(entry.date), entry.startTime) + delta.addMinutes);
+      await performMove(entry.id, { date: resolved.date, startTime: resolved.time });
     } else if (delta.toTomorrow) {
-      await performMove(entry.id, { date: dateKey(addDaysUtc(parseDateKey(entryDateKey(entry.date)), 1)), startTime: entry.startTime, endTime: entry.endTime });
+      await performMove(entry.id, { date: dateKey(addDaysUtc(parseDateKey(entryDateKey(entry.date)), 1)), startTime: entry.startTime });
     }
   }
 
-  async function performMove(id: string, body: { date: string; startTime: string; endTime: string; reason?: string }) {
+  async function performMove(id: string, body: { date: string; startTime: string; reason?: string }) {
     const res = await fetch(`/api/dayplan-entries/${id}/move`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -209,6 +254,9 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
           <p className="text-[#C8C5D2] mt-1">Plane genau, was du wann tun möchtest — unabhängig von deinen Routinen.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="secondary" size="sm" onClick={() => { setManagePlanId(null); setManageOpen(true); }}>
+            <FolderKanban className="h-4 w-4" /> Tagespläne
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setTemplatesOpen(true)}>
             <LayoutTemplate className="h-4 w-4" /> Vorlagen
           </Button>
@@ -272,14 +320,14 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
         )}
       </div>
 
-      {view === "day" && <DayStatsBar entries={dayEntries} />}
+      {view === "day" && <DayStatsBar entries={dayOwnedEntries} />}
 
       {loading ? (
         <div className="py-16 text-center text-sm text-[#8D8998]">Lädt…</div>
       ) : (
         <>
           {view === "day" &&
-            (dayEntries.length === 0 && entries.length === 0 && !loading ? (
+            (dayTouchingEntries.length === 0 && entries.length === 0 && !loading ? (
               <EmptyState
                 illustration={<EmptyDayPlanIllustration className="w-full" />}
                 title="Plane deinen Tag und behalte den Überblick."
@@ -297,12 +345,15 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
               />
             ) : (
               <DayTimeline
-                entries={dayEntries}
+                entries={dayTouchingEntries}
+                selectedDateKey={selectedDateKey}
                 isToday={selectedDateKey === todayKey}
                 onToggle={handleToggle}
                 onEdit={(entry) => setEntryModal({ entry })}
                 onCreateAt={(startTime) => setEntryModal({ date: selectedDateKey, start: startTime, end: addMinutesClamped(startTime, 60) })}
                 onMove={handleMoveTime}
+                onDuplicate={(id) => handleDuplicate(id)}
+                onDelete={(id) => handleDelete(id)}
               />
             ))}
 
@@ -313,6 +364,8 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
               todayKey={todayKey}
               onToggle={handleToggle}
               onEdit={(entry) => setEntryModal({ entry })}
+              onDuplicate={(id) => handleDuplicate(id)}
+              onDelete={(id) => handleDelete(id)}
               onMoveToDay={handleMoveToDay}
               onSelectDay={(key) => {
                 setSelectedDateKey(key);
@@ -321,7 +374,9 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
             />
           )}
 
-          {view === "list" && <ListView entries={entries} onToggle={handleToggle} onEdit={(entry) => setEntryModal({ entry })} />}
+          {view === "list" && (
+            <ListView entries={entries} onToggle={handleToggle} onEdit={(entry) => setEntryModal({ entry })} onDuplicate={(id) => handleDuplicate(id)} onDelete={(id) => handleDelete(id)} />
+          )}
 
           {view === "day" && <DaySummaryReview dateKey={selectedDateKey} isPastOrToday={selectedDateKey <= todayKey} />}
         </>
@@ -337,7 +392,13 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
         onCreate={handleCreate}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
         onMoveQuick={handleMoveQuick}
+        onOpenPlan={(dayPlanId) => {
+          setEntryModal(null);
+          setManagePlanId(dayPlanId);
+          setManageOpen(true);
+        }}
       />
       <DayPlanWizardModal
         open={wizardOpen}
@@ -349,6 +410,15 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
       />
       <QuickAddModal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} onCreated={fetchEntries} />
       <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={fetchEntries} />
+      <DayPlanManageModal
+        open={manageOpen}
+        initialPlanId={managePlanId}
+        onClose={() => {
+          setManageOpen(false);
+          setManagePlanId(null);
+        }}
+        onChanged={fetchEntries}
+      />
 
       {!xpForDayPlanning && (
         <p className="text-[11px] text-[#5F5B68] text-center">

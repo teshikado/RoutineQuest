@@ -13,9 +13,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
   }
-  if (parsed.data.endTime <= parsed.data.startTime) {
-    return NextResponse.json({ error: "Die Endzeit muss nach der Startzeit liegen.", code: "INVALID_TIME_RANGE" }, { status: 400 });
-  }
+  // No same-day endTime>startTime check here: moveEntry() either takes an explicit
+  // endDate/endTime (validated there against the full combined instant, which allows
+  // crossing midnight) or omits them entirely and preserves the original duration.
 
   try {
     const result = await moveEntry(userId, id, parsed.data);

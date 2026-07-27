@@ -159,8 +159,11 @@ function TemplateEditor({ template, onClose, onSaved }: { template: DayPlanTempl
     }
     const validBlocks = blocks.filter((b) => b.title.trim());
     for (const b of validBlocks) {
-      if (b.endTime <= b.startTime) {
-        setError(`„${b.title}“: Die Endzeit muss nach der Startzeit liegen.`);
+      // Templates have no absolute date: endTime <= startTime is read as "ends the next
+      // day" (see templateEntryEndsNextDay in dayplan-service.ts), so only an exact-equal
+      // start/end is actually invalid.
+      if (b.startTime === b.endTime) {
+        setError(`„${b.title}“: Start- und Endzeit dürfen nicht identisch sein.`);
         return;
       }
     }

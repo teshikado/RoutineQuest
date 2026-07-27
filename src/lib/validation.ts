@@ -120,30 +120,46 @@ const DAYPLAN_PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
 const DAYPLAN_STATUSES = ["PLANNED", "IN_PROGRESS", "DONE", "SKIPPED", "MOVED"] as const;
 const DAYPLAN_RECURRENCE_TYPES = ["SINGLE_DAY", "EVERY_DAY", "WEEKDAYS", "WEEKEND", "CUSTOM_DAYS"] as const;
 
-export const dayPlanSchema = z
-  .object({
-    title: z.string().trim().min(1, "Bitte gib einen Namen ein.").max(60),
-    description: z.string().trim().max(300).optional().nullable(),
-    startDate: dateKeySchema,
-    endDate: dateKeySchema,
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-    icon: z.string().min(1),
-    recurrenceType: z.enum(DAYPLAN_RECURRENCE_TYPES),
-    recurrenceDays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
-    reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
-  })
+const dayPlanBaseSchema = z.object({
+  title: z.string().trim().min(1, "Bitte gib einen Namen ein.").max(60),
+  description: z.string().trim().max(300).optional().nullable(),
+  startDate: dateKeySchema,
+  endDate: dateKeySchema,
+  timeZone: z.string().min(1).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  icon: z.string().min(1),
+  recurrenceType: z.enum(DAYPLAN_RECURRENCE_TYPES),
+  recurrenceDays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+  reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+});
+
+export const dayPlanSchema = dayPlanBaseSchema
   .refine((d) => d.endDate >= d.startDate, { message: "Das Enddatum darf nicht vor dem Startdatum liegen.", path: ["endDate"] })
   .refine((d) => d.recurrenceType !== "CUSTOM_DAYS" || (d.recurrenceDays?.length ?? 0) > 0, {
     message: "Wähle mindestens einen Wochentag.",
     path: ["recurrenceDays"],
   });
 
+// Full DayPlan edit ("Tagesplan bearbeiten"): every field optional, since the user may only
+// change e.g. the color. Cross-field range validation runs server-side in updateDayPlan().
+export const dayPlanUpdateSchema = dayPlanBaseSchema.partial().extend({
+  archived: z.boolean().optional(),
+});
+
+// Field-shape validation only (formats, required-ness). The actual "is this a valid
+// start/end range" cross-field check -- which must account for blocks crossing
+// midnight -- happens server-side in dayplan-service.ts's assertValidEntryRange, the one
+// place that logic is allowed to live. `endDate`/`endsNextDay` are both optional here:
+// callers may pass an explicit endDate, or just `endsNextDay: true` and let the service
+// derive endDate = date + 1.
 export const dayPlanEntryBaseSchema = z.object({
   title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(60),
   description: z.string().trim().max(300).optional().nullable(),
   date: dateKeySchema,
+  endDate: dateKeySchema.optional(),
   startTime: timeSchema,
   endTime: timeSchema,
+  endsNextDay: z.boolean().optional(),
   category: z.enum(DAYPLAN_CATEGORIES),
   priority: z.enum(DAYPLAN_PRIORITIES),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
@@ -156,20 +172,19 @@ export const dayPlanEntryBaseSchema = z.object({
   linkedGroupRoutineId: z.string().optional().nullable(),
 });
 
-export const dayPlanEntrySchema = dayPlanEntryBaseSchema.refine((d) => d.endTime > d.startTime, {
-  message: "Die Endzeit muss nach der Startzeit liegen.",
-  path: ["endTime"],
-});
+export const dayPlanEntrySchema = dayPlanEntryBaseSchema;
 
 export const dayPlanEntryUpdateSchema = dayPlanEntryBaseSchema.partial().extend({
   status: z.enum(DAYPLAN_STATUSES).optional(),
   scope: z.enum(["THIS", "FOLLOWING", "ALL"]).optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
 
 export const dayPlanEntryMoveSchema = z.object({
   date: dateKeySchema,
   startTime: timeSchema,
-  endTime: timeSchema,
+  endDate: dateKeySchema.optional(),
+  endTime: timeSchema.optional(),
   reason: z.string().trim().max(120).optional().nullable(),
 });
 
@@ -202,7 +217,10 @@ export const dayPlanTemplateSchema = z.object({
           notes: z.string().trim().max(1000).optional().nullable(),
           reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
         })
-        .refine((d) => d.endTime > d.startTime, { message: "Die Endzeit muss nach der Startzeit liegen.", path: ["endTime"] })
+        // Templates have no absolute date, so endTime <= startTime means "ends the next
+        // day" (see templateEntryEndsNextDay in dayplan-service.ts) -- only exact equality
+        // (zero/negative duration either way) is actually invalid here.
+        .refine((d) => d.startTime !== d.endTime, { message: "Start- und Endzeit dürfen nicht identisch sein.", path: ["endTime"] })
     )
     .max(50),
 });

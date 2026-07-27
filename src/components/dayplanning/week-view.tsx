@@ -1,9 +1,9 @@
 "use client";
 
 import clsx from "clsx";
-import { EntryCard } from "./entry-card";
+import { EntryCard, type ContinuationSegment } from "./entry-card";
 import { WEEKDAY_LABELS_LONG } from "@/lib/constants";
-import { intervalsOverlap } from "@/lib/dayplan-client-utils";
+import { entriesOverlapClient } from "@/lib/dayplan-client-utils";
 import type { DayPlanEntryDTO } from "@/lib/dayplan-types";
 
 export function WeekView({
@@ -12,32 +12,40 @@ export function WeekView({
   todayKey,
   onToggle,
   onEdit,
+  onDuplicate,
+  onDelete,
   onMoveToDay,
   onSelectDay,
 }: {
   days: { key: string; weekday: number; dayOfMonth: number }[];
-  entriesByDay: Record<string, DayPlanEntryDTO[]>;
+  entriesByDay: Record<string, Array<{ entry: DayPlanEntryDTO; segment: ContinuationSegment }>>;
   todayKey: string;
   onToggle: (id: string) => void;
   onEdit: (entry: DayPlanEntryDTO) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
   onMoveToDay: (entry: DayPlanEntryDTO, dateKey: string) => void;
   onSelectDay: (dateKey: string) => void;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-7 gap-2 overflow-x-auto">
       {days.map((day) => {
-        const dayEntries = (entriesByDay[day.key] ?? []).slice().sort((a, b) => a.startTime.localeCompare(b.startTime));
-        const done = dayEntries.filter((e) => e.status === "DONE").length;
-        const total = dayEntries.length;
+        const dayItems = (entriesByDay[day.key] ?? []).slice().sort((a, b) => a.entry.startTime.localeCompare(b.entry.startTime));
+        // A block "belongs" to its start day for progress purposes -- only "full"/"start"
+        // segments count toward this day's ring; an "end" segment is shown (it's still a
+        // real continuation) but must not be double-counted as a second task here.
+        const ownedItems = dayItems.filter((i) => i.segment !== "end");
+        const done = ownedItems.filter((i) => i.entry.status === "DONE").length;
+        const total = ownedItems.length;
         const ratio = total > 0 ? done / total : 0;
         const isToday = day.key === todayKey;
 
         const overlapIds = new Set<string>();
-        for (let i = 0; i < dayEntries.length; i++) {
-          for (let j = i + 1; j < dayEntries.length; j++) {
-            if (intervalsOverlap(dayEntries[i].startTime, dayEntries[i].endTime, dayEntries[j].startTime, dayEntries[j].endTime)) {
-              overlapIds.add(dayEntries[i].id);
-              overlapIds.add(dayEntries[j].id);
+        for (let i = 0; i < dayItems.length; i++) {
+          for (let j = i + 1; j < dayItems.length; j++) {
+            if (entriesOverlapClient(dayItems[i].entry, dayItems[j].entry)) {
+              overlapIds.add(dayItems[i].entry.id);
+              overlapIds.add(dayItems[j].entry.id);
             }
           }
         }
@@ -53,8 +61,10 @@ export function WeekView({
             onDrop={(e) => {
               e.preventDefault();
               const entryId = e.dataTransfer.getData("text/dayplan-entry-id");
-              const found = Object.values(entriesByDay).flat().find((x) => x.id === entryId);
-              if (found) onMoveToDay(found, day.key);
+              const found = Object.values(entriesByDay)
+                .flat()
+                .find((x) => x.entry.id === entryId);
+              if (found) onMoveToDay(found.entry, day.key);
             }}
           >
             <button onClick={() => onSelectDay(day.key)} className="flex items-center justify-between text-left">
@@ -71,18 +81,21 @@ export function WeekView({
             )}
 
             <div className="flex-1 space-y-1.5">
-              {dayEntries.length === 0 ? (
+              {dayItems.length === 0 ? (
                 <p className="text-[11px] text-[#5F5B68] py-2">Frei</p>
               ) : (
-                dayEntries.map((entry) => (
-                  <div key={entry.id} className={clsx(overlapIds.has(entry.id) && "ring-1 ring-[#FB7185] rounded-xl")}>
+                dayItems.map(({ entry, segment }) => (
+                  <div key={`${entry.id}-${segment}`} className={clsx(overlapIds.has(entry.id) && "ring-1 ring-[#FB7185] rounded-xl")}>
                     <EntryCard
                       entry={entry}
+                      segment={segment}
                       compact
                       dense
                       onToggle={onToggle}
                       onEdit={onEdit}
-                      draggable
+                      onDuplicate={onDuplicate}
+                      onDelete={onDelete}
+                      draggable={segment !== "end"}
                       onDragStart={(e, en) => e.dataTransfer.setData("text/dayplan-entry-id", en.id)}
                     />
                   </div>
