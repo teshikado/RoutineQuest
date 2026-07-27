@@ -106,3 +106,121 @@ export const groupRoutineSchema = groupRoutineBaseSchema.refine(
 export const participationResponseSchema = z.object({
   decision: z.enum(["JOIN", "DECLINE", "LATER"]),
 });
+
+// ---------- Day planning ----------
+
+const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ungültiges Datum.");
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Ungültige Uhrzeit.");
+
+const DAYPLAN_CATEGORIES = [
+  "WORK", "TRADING", "LEARNING", "SPORT", "HEALTH", "LEISURE",
+  "BREAK", "APPOINTMENT", "HOUSEHOLD", "SLEEP", "PERSONAL", "OTHER",
+] as const;
+const DAYPLAN_PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
+const DAYPLAN_STATUSES = ["PLANNED", "IN_PROGRESS", "DONE", "SKIPPED", "MOVED"] as const;
+const DAYPLAN_RECURRENCE_TYPES = ["SINGLE_DAY", "EVERY_DAY", "WEEKDAYS", "WEEKEND", "CUSTOM_DAYS"] as const;
+
+export const dayPlanSchema = z
+  .object({
+    title: z.string().trim().min(1, "Bitte gib einen Namen ein.").max(60),
+    description: z.string().trim().max(300).optional().nullable(),
+    startDate: dateKeySchema,
+    endDate: dateKeySchema,
+    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    icon: z.string().min(1),
+    recurrenceType: z.enum(DAYPLAN_RECURRENCE_TYPES),
+    recurrenceDays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+    reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+  })
+  .refine((d) => d.endDate >= d.startDate, { message: "Das Enddatum darf nicht vor dem Startdatum liegen.", path: ["endDate"] })
+  .refine((d) => d.recurrenceType !== "CUSTOM_DAYS" || (d.recurrenceDays?.length ?? 0) > 0, {
+    message: "Wähle mindestens einen Wochentag.",
+    path: ["recurrenceDays"],
+  });
+
+export const dayPlanEntryBaseSchema = z.object({
+  title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(60),
+  description: z.string().trim().max(300).optional().nullable(),
+  date: dateKeySchema,
+  startTime: timeSchema,
+  endTime: timeSchema,
+  category: z.enum(DAYPLAN_CATEGORIES),
+  priority: z.enum(DAYPLAN_PRIORITIES),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  icon: z.string().min(1),
+  location: z.string().trim().max(120).optional().nullable(),
+  link: z.string().trim().max(500).optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+  reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+  linkedRoutineId: z.string().optional().nullable(),
+  linkedGroupRoutineId: z.string().optional().nullable(),
+});
+
+export const dayPlanEntrySchema = dayPlanEntryBaseSchema.refine((d) => d.endTime > d.startTime, {
+  message: "Die Endzeit muss nach der Startzeit liegen.",
+  path: ["endTime"],
+});
+
+export const dayPlanEntryUpdateSchema = dayPlanEntryBaseSchema.partial().extend({
+  status: z.enum(DAYPLAN_STATUSES).optional(),
+  scope: z.enum(["THIS", "FOLLOWING", "ALL"]).optional(),
+});
+
+export const dayPlanEntryMoveSchema = z.object({
+  date: dateKeySchema,
+  startTime: timeSchema,
+  endTime: timeSchema,
+  reason: z.string().trim().max(120).optional().nullable(),
+});
+
+export const quickAddEntrySchema = z.object({
+  title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(60),
+  date: dateKeySchema,
+  startTime: timeSchema,
+  durationMinutes: z.number().int().min(5).max(720),
+});
+
+export const dayPlanTemplateSchema = z.object({
+  name: z.string().trim().min(1, "Bitte gib einen Namen ein.").max(60),
+  description: z.string().trim().max(300).optional().nullable(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  icon: z.string().min(1),
+  entries: z
+    .array(
+      z
+        .object({
+          title: z.string().trim().min(1).max(60),
+          description: z.string().trim().max(300).optional().nullable(),
+          startTime: timeSchema,
+          endTime: timeSchema,
+          category: z.enum(DAYPLAN_CATEGORIES),
+          priority: z.enum(DAYPLAN_PRIORITIES),
+          color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+          icon: z.string().min(1),
+          location: z.string().trim().max(120).optional().nullable(),
+          link: z.string().trim().max(500).optional().nullable(),
+          notes: z.string().trim().max(1000).optional().nullable(),
+          reminderMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+        })
+        .refine((d) => d.endTime > d.startTime, { message: "Die Endzeit muss nach der Startzeit liegen.", path: ["endTime"] })
+    )
+    .max(50),
+});
+
+export const applyTemplateSchema = z
+  .object({
+    startDate: dateKeySchema,
+    endDate: dateKeySchema.optional(),
+    recurrenceType: z.enum(DAYPLAN_RECURRENCE_TYPES).default("SINGLE_DAY"),
+    recurrenceDays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+  })
+  .refine((d) => !d.endDate || d.endDate >= d.startDate, {
+    message: "Das Enddatum darf nicht vor dem Startdatum liegen.",
+    path: ["endDate"],
+  });
+
+export const dayReviewSchema = z.object({
+  date: dateKeySchema,
+  mood: z.enum(["GREAT", "GOOD", "OKAY", "HARD", "BAD"]).optional().nullable(),
+  note: z.string().trim().max(1000).optional().nullable(),
+});

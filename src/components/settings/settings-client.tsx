@@ -68,6 +68,57 @@ function NotificationSettings() {
   );
 }
 
+function DayPlanningXpSetting() {
+  const { showToast } = useToast();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/dayplanning")
+      .then((r) => r.json())
+      .then((d) => setEnabled(d.xpForDayPlanning));
+  }, []);
+
+  async function toggle(next: boolean) {
+    setEnabled(next);
+    await fetch("/api/settings/dayplanning", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ xpForDayPlanning: next }),
+    });
+    showToast(next ? "XP für Tagesplanung aktiviert." : "XP für Tagesplanung deaktiviert.", "info");
+  }
+
+  if (enabled === null) {
+    return (
+      <div className="flex justify-center py-4">
+        <Spinner />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <div className="text-sm font-semibold text-[#F8F7FC]">XP für Tagesplanung aktivieren</div>
+        <div className="text-xs text-[#C8C5D2]">
+          Standardmäßig geben Tagesplan-Einträge keine XP. Bei Aktivierung geben eigenständige Zeitblöcke (ohne
+          Routinen-Verknüpfung) beim Abhaken etwas XP. Mit einer Routine verbundene Einträge geben ihre XP weiterhin
+          nur einmal über die Routine.
+        </div>
+      </div>
+      <button
+        role="switch"
+        aria-checked={enabled}
+        aria-label="XP für Tagesplanung"
+        onClick={() => toggle(!enabled)}
+        className={`relative h-6 w-11 rounded-full shrink-0 transition-colors ${enabled ? "bg-[#A855F7]" : "bg-[#292936]"}`}
+      >
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+      </button>
+    </div>
+  );
+}
+
 function PasswordSettings() {
   const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -185,6 +236,12 @@ export function SettingsClient({ appVersion }: { appVersion: string }) {
       </Card>
 
       <Card>
+        <CardTitle className="mb-1">Tagesplanung</CardTitle>
+        <CardSubtitle className="mb-4">Steuere, ob Tagesplan-Einträge zusätzlich XP geben.</CardSubtitle>
+        <DayPlanningXpSetting />
+      </Card>
+
+      <Card>
         <CardTitle className="mb-1">Passwort ändern</CardTitle>
         <CardSubtitle className="mb-4">Wähle ein sicheres, einzigartiges Passwort.</CardSubtitle>
         <PasswordSettings />
@@ -196,6 +253,13 @@ export function SettingsClient({ appVersion }: { appVersion: string }) {
           Deine Routinen und deren Details sind immer privat. In Gruppen werden ausschließlich aggregierte
           Fortschrittswerte (XP, erledigte Aufgaben, Erfolgsquote, Streak, Level) geteilt – niemals Titel oder
           Beschreibungen deiner Routinen.
+        </CardSubtitle>
+        <CardSubtitle className="mt-3">
+          Deine Tagesplanung (Zeitblöcke, Uhrzeiten, Orte, Notizen, Erinnerungen und deine private Tagesbewertung)
+          ist ausschließlich für dich sichtbar und wird nie mit anderen Nutzern oder Gruppenmitgliedern geteilt. Nur
+          wenn du einen Zeitblock ausdrücklich mit einer Gruppenroutine verbindest, fließt dessen Erledigung wie
+          gewohnt in den gemeinsamen Gruppenfortschritt ein — dein Zeitplan selbst bleibt dabei privat. Tagesplan-Daten
+          werden wie deine übrigen Kontodaten gespeichert und bei einer Kontolöschung mitgelöscht.
         </CardSubtitle>
       </Card>
     </div>

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Flame, Plus, Users, ChevronRight } from "lucide-react";
+import { Flame, Plus, Users, ChevronRight, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -65,6 +65,8 @@ export function DashboardClient({
     board: BoardItem[];
     groupBoard: GroupBoardItem[];
     weekMini: { dateKey: string; scheduled: number; done: number }[];
+    nextPlanEntry: { id: string; title: string; icon: string; color: string; startTime: string; endTime: string } | null;
+    dayPlanStats: { total: number; done: number; open: number };
     groups: { id: string; name: string; icon: string; color: string; memberCount: number }[];
   };
 }) {
@@ -269,6 +271,39 @@ export function DashboardClient({
                 <GroupTaskCard key={item.groupRoutine.id} data={item} onToggle={handleGroupToggle} />
               ))}
             </div>
+          )}
+        </Card>
+      </Reveal>
+
+      <Reveal delay={0.08}>
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-bold text-[#F8F7FC] flex items-center gap-1.5">
+              <CalendarClock className="h-4 w-4 text-[#A855F7]" /> Dein nächster Termin
+            </h2>
+            <Link href="/dayplanning" className="text-xs font-semibold text-[#A855F7] flex items-center hover:underline underline-offset-2">
+              Tagesplan öffnen <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          {data.nextPlanEntry ? (
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: data.nextPlanEntry.color + "22" }}>
+                <DynamicIcon name={data.nextPlanEntry.icon} className="h-4 w-4" style={{ color: data.nextPlanEntry.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-[#F8F7FC] truncate">{data.nextPlanEntry.title}</div>
+                <div className="text-xs text-[#C8C5D2] tabular-nums">
+                  {data.nextPlanEntry.startTime}–{data.nextPlanEntry.endTime} Uhr
+                </div>
+              </div>
+              <div className="text-xs text-[#8D8998] text-right shrink-0">
+                {data.dayPlanStats.open} offen · {data.dayPlanStats.done}/{data.dayPlanStats.total}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[#C8C5D2]">
+              {data.dayPlanStats.total > 0 ? "Für heute ist alles erledigt oder übersprungen." : "Für heute ist noch nichts eingeplant."}
+            </p>
           )}
         </Card>
       </Reveal>

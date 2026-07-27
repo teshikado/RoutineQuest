@@ -39,6 +39,27 @@ export function EmptyGroupsIllustration({ className }: IllustrationProps) {
   );
 }
 
+export function EmptyDayPlanIllustration({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 200 160" className={className} fill="none" role="presentation" aria-hidden="true">
+      <ellipse cx="100" cy="142" rx="64" ry="10" fill="#292936" />
+      <rect x="46" y="26" width="108" height="106" rx="16" fill="#171720" stroke="#D8B4FE" strokeWidth="2" />
+      <rect x="46" y="26" width="108" height="26" rx="16" fill="#A855F7" />
+      <rect x="46" y="42" width="108" height="10" fill="#A855F7" />
+      <circle cx="68" cy="39" r="4" fill="#F8F7FC" />
+      <circle cx="132" cy="39" r="4" fill="#F8F7FC" />
+      <rect x="62" y="66" width="76" height="8" rx="4" fill="#292936" />
+      <rect x="62" y="66" width="40" height="8" rx="4" fill="#34D399" />
+      <rect x="62" y="86" width="76" height="8" rx="4" fill="#292936" />
+      <rect x="62" y="86" width="20" height="8" rx="4" fill="#FACC15" />
+      <rect x="62" y="106" width="76" height="8" rx="4" fill="#292936" />
+      <path d="M148 100l4 8 8 4-8 4-4 8-4-8-8-4 8-4 4-8z" fill="#FACC15" />
+      <circle cx="44" cy="104" r="12" fill="#111118" stroke="#34D399" strokeWidth="2" />
+      <path d="M39 104l4 4 8-8" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function EmptyStatsIllustration({ className }: IllustrationProps) {
   return (
     <svg viewBox="0 0 200 160" className={className} fill="none" role="presentation" aria-hidden="true">

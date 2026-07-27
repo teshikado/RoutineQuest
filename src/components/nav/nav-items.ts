@@ -1,5 +1,6 @@
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { href: "/dayplanning", label: "Tagesplanung", icon: "CalendarClock" },
   { href: "/routines", label: "Meine Routinen", icon: "ListChecks" },
   { href: "/week", label: "Wochenplan", icon: "CalendarDays" },
   { href: "/stats", label: "Statistiken", icon: "BarChart3" },
@@ -11,6 +12,7 @@ export const NAV_ITEMS = [
 
 export const MOBILE_NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: "LayoutDashboard" },
+  { href: "/dayplanning", label: "Plan", icon: "CalendarClock" },
   { href: "/routines", label: "Routinen", icon: "ListChecks" },
   { href: "/week", label: "Woche", icon: "CalendarDays" },
   { href: "/groups", label: "Gruppen", icon: "Users" },

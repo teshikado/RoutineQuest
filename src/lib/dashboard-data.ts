@@ -9,6 +9,19 @@ export async function getDashboardData(userId: string) {
   const board = await getDayBoard(userId, today);
   const groupBoard = await getGroupRoutineDayBoard(userId, today);
 
+  const todayPlanEntries = await prisma.dayPlanEntry.findMany({
+    where: { userId, date: today },
+    orderBy: { startTime: "asc" },
+  });
+  const nowHHmm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  const nextPlanEntry =
+    todayPlanEntries.find((e) => e.status !== "DONE" && e.status !== "SKIPPED" && e.endTime > nowHHmm) ?? null;
+  const dayPlanStats = {
+    total: todayPlanEntries.length,
+    done: todayPlanEntries.filter((e) => e.status === "DONE").length,
+    open: todayPlanEntries.filter((e) => e.status !== "DONE" && e.status !== "SKIPPED").length,
+  };
+
   const week = getWeekInfo(today);
   const weekRoutines = await prisma.routine.findMany({
     where: { userId, createdAt: { lte: new Date() } },
@@ -41,6 +54,8 @@ export async function getDashboardData(userId: string) {
     board,
     groupBoard,
     weekMini,
+    nextPlanEntry,
+    dayPlanStats,
     groups: groupsSummary.map((m) => ({
       id: m.group.id,
       name: m.group.name,
