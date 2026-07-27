@@ -1,4 +1,5 @@
-import { todayDateOnly, dateKey } from "./dates";
+import { todayDateOnly, dateKey, addDaysUtc, isoWeekday } from "./dates";
+import type { DayPlanRecurrenceType } from "@prisma/client";
 
 /** Helpers shared by day-planning client components. Deliberately separate from
  * src/lib/dayplan-service.ts, which imports the Prisma client and must never end up in a
@@ -76,6 +77,36 @@ export function entriesOverlapClient(
  * timezone (mirrors the Intl-based approach used throughout src/lib/dates.ts). */
 export function berlinNowTime(): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+}
+
+/** Client mirror of generateDayPlanDates in dayplan-service.ts, used only for the plan
+ * editor's live "this applies to N days" preview while the user is still picking a range --
+ * never for anything that touches the database (the server is always the source of truth
+ * for which entries actually get created/removed). */
+export function generateDayPlanDatesClient(
+  startDateKey: string,
+  endDateKey: string,
+  recurrenceType: DayPlanRecurrenceType,
+  recurrenceDays: number[]
+): string[] {
+  if (!startDateKey || !endDateKey || endDateKey < startDateKey) return [];
+  const start = new Date(`${startDateKey}T00:00:00.000Z`);
+  const end = new Date(`${endDateKey}T00:00:00.000Z`);
+  const dayCount = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (dayCount > 366) return [];
+  const keys: string[] = [];
+  for (let i = 0; i < dayCount; i++) {
+    const cursor = addDaysUtc(start, i);
+    const weekday = isoWeekday(cursor);
+    const matches =
+      recurrenceType === "SINGLE_DAY" ||
+      recurrenceType === "EVERY_DAY" ||
+      (recurrenceType === "WEEKDAYS" && weekday >= 1 && weekday <= 5) ||
+      (recurrenceType === "WEEKEND" && (weekday === 6 || weekday === 7)) ||
+      (recurrenceType === "CUSTOM_DAYS" && recurrenceDays.includes(weekday));
+    if (matches) keys.push(dateKey(cursor));
+  }
+  return keys;
 }
 
 /** True while `now` falls inside [entry.date+startTime, entry.endDate+endTime) -- the

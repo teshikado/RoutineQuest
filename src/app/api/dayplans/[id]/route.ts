@@ -28,8 +28,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const plan = await updateDayPlan(userId, id, parsed.data);
-    return NextResponse.json(plan);
+    const { syncFutureEntries, ...patch } = parsed.data;
+    const result = await updateDayPlan(userId, id, patch, { syncFutureEntries });
+    return NextResponse.json(result);
   } catch (err) {
     if (err instanceof DayPlanError) return NextResponse.json({ error: err.message, code: err.code }, { status: err.code === "PLAN_NOT_FOUND" ? 404 : 400 });
     throw err;

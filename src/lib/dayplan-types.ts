@@ -29,6 +29,7 @@ export type DayPlanEntryDTO = {
   linkedGroupRoutineId: string | null;
   moveReason: string | null;
   completedAt: string | null;
+  isCustomized: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -79,6 +80,41 @@ export type DayPlanTemplateDTO = {
   entries: DayPlanTemplateEntryDTO[];
   createdAt: string;
   updatedAt: string;
+};
+
+/** One recurring block collapsed down to its "template" shape (see getDayPlanOverview in
+ * dayplan-service.ts) -- what the compact plan editor shows instead of every individual
+ * materialized occurrence. */
+export type DayPlanSeriesBlockDTO = {
+  seriesId: string;
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  endsNextDay: boolean;
+  category: DayPlanEntryCategory;
+  priority: DayPlanEntryPriority;
+  color: string;
+  icon: string;
+  location: string | null;
+  link: string | null;
+  notes: string | null;
+  reminderMinutes: number | null;
+  linkedRoutineId: string | null;
+  linkedGroupRoutineId: string | null;
+  sortOrder: number;
+  totalCount: number;
+  futureCount: number;
+  pastCount: number;
+  customizedDays: Array<{ entryId: string; date: string; title: string }>;
+  missingDays: string[];
+};
+
+export type DayPlanOverviewDTO = {
+  plan: DayPlanDTO;
+  blocks: DayPlanSeriesBlockDTO[];
+  extras: DayPlanEntryDTO[];
+  expectedOccurrenceCount: number;
 };
 
 export type DayReviewDTO = {

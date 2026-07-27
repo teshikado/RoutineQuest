@@ -40,6 +40,8 @@ function presetToRange(preset: DateRangePresetKey): { startDate: string; endDate
       return { startDate: dateKey(today), endDate: dateKey(addDaysUtc(today, 13)) };
     case "month":
       return { startDate: dateKey(today), endDate: dateKey(addDaysUtc(addMonthsUtc(today, 1), -1)) };
+    case "threeMonths":
+      return { startDate: dateKey(today), endDate: dateKey(addDaysUtc(addMonthsUtc(today, 3), -1)) };
     case "custom":
       return { startDate: dateKey(today), endDate: dateKey(addDaysUtc(today, 6)) };
   }

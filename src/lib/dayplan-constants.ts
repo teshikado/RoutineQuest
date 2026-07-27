@@ -93,6 +93,7 @@ export const DATE_RANGE_PRESETS = [
   { key: "week", label: "Eine Woche" },
   { key: "twoWeeks", label: "Zwei Wochen" },
   { key: "month", label: "Ein Monat" },
+  { key: "threeMonths", label: "Drei Monate" },
   { key: "custom", label: "Benutzerdefinierter Zeitraum" },
 ] as const;
 

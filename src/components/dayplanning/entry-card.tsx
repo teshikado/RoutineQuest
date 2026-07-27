@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Check, MapPin, Link2, Repeat, MoreVertical, Pencil, Copy, ArrowRightLeft, Trash2, Undo2, PlayCircle } from "lucide-react";
+import { Check, MapPin, Link2, Repeat, PencilLine, MoreVertical, Pencil, Copy, ArrowRightLeft, Trash2, Undo2, PlayCircle } from "lucide-react";
 import { DynamicIcon } from "@/components/ui/icon";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DAYPLAN_STATUS_META, DAYPLAN_PRIORITY_META } from "@/lib/dayplan-constants";
@@ -91,6 +91,9 @@ export function EntryCard({
             {entry.title}
           </span>
           {entry.seriesId && <Repeat className="h-3 w-3 text-[#8D8998] shrink-0" aria-label="Teil einer Wiederholung" />}
+          {entry.isCustomized && (
+            <PencilLine className="h-3 w-3 text-[#A855F7] shrink-0" aria-label="Individuell an diesem Tag angepasst" />
+          )}
           {runningNow && (
             <span className="flex items-center gap-0.5 text-[10px] font-bold text-[#A855F7] shrink-0">
               <PlayCircle className="h-3 w-3" /> Läuft

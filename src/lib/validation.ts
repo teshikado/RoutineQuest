@@ -142,8 +142,12 @@ export const dayPlanSchema = dayPlanBaseSchema
 
 // Full DayPlan edit ("Tagesplan bearbeiten"): every field optional, since the user may only
 // change e.g. the color. Cross-field range validation runs server-side in updateDayPlan().
+// `syncFutureEntries` opts into reconciling already-materialized future occurrences with a
+// changed date range/recurrence (see updateDayPlan in dayplan-service.ts) -- omitted/false
+// keeps the original, more conservative "container fields only" behavior.
 export const dayPlanUpdateSchema = dayPlanBaseSchema.partial().extend({
   archived: z.boolean().optional(),
+  syncFutureEntries: z.boolean().optional(),
 });
 
 // Field-shape validation only (formats, required-ness). The actual "is this a valid
@@ -178,6 +182,27 @@ export const dayPlanEntryUpdateSchema = dayPlanEntryBaseSchema.partial().extend(
   status: z.enum(DAYPLAN_STATUSES).optional(),
   scope: z.enum(["THIS", "FOLLOWING", "ALL"]).optional(),
   sortOrder: z.number().int().min(0).optional(),
+  includeCustomized: z.boolean().optional(),
+});
+
+// A recurring block's "template" edit: same shape as an entry, minus the absolute
+// date/endDate fields (a series occupies many dates, so this only edits the *shape* every
+// future, not-yet-customized occurrence shares -- see updateSeriesBlock).
+export const seriesBlockUpdateSchema = dayPlanEntryBaseSchema
+  .omit({ date: true, endDate: true })
+  .partial()
+  .extend({ includeCustomized: z.boolean().optional() });
+
+export const seriesBlockDeleteQuerySchema = z.object({
+  includeCustomized: z.enum(["true", "false"]).optional(),
+});
+
+export const restoreOccurrenceSchema = z.object({
+  date: dateKeySchema,
+});
+
+export const reorderSeriesBlocksSchema = z.object({
+  seriesIds: z.array(z.string().min(1)).min(1).max(50),
 });
 
 export const dayPlanEntryMoveSchema = z.object({

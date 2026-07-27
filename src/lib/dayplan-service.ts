@@ -174,6 +174,21 @@ function assertValidEntryRange(date: Date, startTime: string, endDate: Date, end
   }
 }
 
+/** Picks the entry that best represents "what this recurring block currently looks like"
+ * out of every occurrence in its series. Prefers the earliest FUTURE (>= today)
+ * not-customized occurrence -- future entries reflect the series' current, up-to-date
+ * shape (past entries are deliberately never touched by a template-level edit, see
+ * updateSeriesBlock, so a past occurrence can carry stale pre-edit values and must never be
+ * used as "the template"). Falls back to the earliest non-customized occurrence of any date
+ * if none of the series' future entries are still on-template, and finally to the earliest
+ * occurrence overall if every single one has been individually customized. */
+function pickSeriesTemplate(entries: DayPlanEntry[], today: Date): DayPlanEntry {
+  const byDateAsc = entries.slice().sort((a, b) => a.date.getTime() - b.date.getTime());
+  const nonCustomized = byDateAsc.filter((e) => !e.isCustomized);
+  const futureNonCustomized = nonCustomized.filter((e) => e.date >= today);
+  return (futureNonCustomized[0] ?? nonCustomized[0] ?? byDateAsc[0])!;
+}
+
 async function assertOwnedLinks(userId: string, linkedRoutineId?: string | null, linkedGroupRoutineId?: string | null) {
   if (linkedRoutineId) {
     const routine = await prisma.routine.findUnique({ where: { id: linkedRoutineId } });
@@ -294,11 +309,121 @@ export async function getDayPlan(userId: string, dayPlanId: string) {
   return plan;
 }
 
-/** Full DayPlan metadata edit, including its date range/recurrence/timezone. Editing the
- * range or recurrence only changes what happens for entries added to the plan *from now
- * on* -- it deliberately never retroactively regenerates or deletes already-materialized
- * entries, since those may carry edits, completions, or XP history that must not be
- * silently destroyed by a container-level change. */
+/** Regenerates future (>= today) series occurrences to match a DayPlan's new
+ * startDate/endDate/recurrence after a schedule edit. Past entries are never touched. For
+ * each recurring block (seriesId group): future dates that were expected under the OLD
+ * schedule but not the new one are removed (unless the occurrence was individually
+ * customized -- those are always kept, see `isCustomized`); future dates newly expected
+ * under the NEW schedule that don't already have an entry are created, cloned from the
+ * series' template (its earliest non-customized entry). Occurrences whose date is expected
+ * under both schedules are left completely alone. */
+async function syncFutureSeriesEntries(
+  userId: string,
+  dayPlanId: string,
+  oldPlan: { startDate: Date; endDate: Date; recurrenceType: DayPlanRecurrenceType; recurrenceDays: number[] },
+  next: { startDate: Date; endDate: Date; recurrenceType: DayPlanRecurrenceType; recurrenceDays: number[] }
+): Promise<{ addedCount: number; removedCount: number; keptCustomizedCount: number; overlaps: OverlapInfo[] }> {
+  const today = todayDateOnly();
+  const allEntries = await prisma.dayPlanEntry.findMany({ where: { dayPlanId, userId } });
+  const bySeries = new Map<string, DayPlanEntry[]>();
+  for (const e of allEntries) {
+    if (!e.seriesId) continue;
+    const arr = bySeries.get(e.seriesId) ?? [];
+    arr.push(e);
+    bySeries.set(e.seriesId, arr);
+  }
+
+  const oldDates = generateDayPlanDates(oldPlan.startDate, oldPlan.endDate, oldPlan.recurrenceType, oldPlan.recurrenceDays);
+  const newDates = generateDayPlanDates(next.startDate, next.endDate, next.recurrenceType, next.recurrenceDays);
+  const todayKey = dateKey(today);
+  const oldFutureKeys = new Set(oldDates.map(dateKey).filter((k) => k >= todayKey));
+  const newFutureKeys = new Set(newDates.map(dateKey).filter((k) => k >= todayKey));
+
+  let addedCount = 0;
+  let removedCount = 0;
+  let keptCustomizedCount = 0;
+  const toDelete: string[] = [];
+  const toCreate: Prisma.DayPlanEntryCreateManyInput[] = [];
+
+  for (const seriesEntries of bySeries.values()) {
+    const sorted = seriesEntries.slice().sort((a, b) => a.date.getTime() - b.date.getTime());
+    const template = pickSeriesTemplate(seriesEntries, today);
+    const seriesId = template.seriesId!;
+    const dayOffset = Math.round((template.endDate.getTime() - template.date.getTime()) / 86400000);
+    const byDateKey = new Map(sorted.map((e) => [dateKey(e.date), e]));
+
+    for (const k of oldFutureKeys) {
+      if (newFutureKeys.has(k)) continue;
+      const e = byDateKey.get(k);
+      if (!e) continue;
+      if (e.isCustomized) {
+        keptCustomizedCount++;
+        continue;
+      }
+      toDelete.push(e.id);
+      removedCount++;
+    }
+
+    for (const k of newFutureKeys) {
+      if (byDateKey.has(k)) continue;
+      const date = parseDateKey(k);
+      const entryEndDate = addDaysUtc(date, dayOffset);
+      toCreate.push({
+        userId,
+        dayPlanId,
+        seriesId,
+        date,
+        endDate: entryEndDate,
+        title: template.title,
+        description: template.description,
+        startTime: template.startTime,
+        endTime: template.endTime,
+        sortOrder: template.sortOrder,
+        category: template.category,
+        priority: template.priority,
+        color: template.color,
+        icon: template.icon,
+        location: template.location,
+        link: template.link,
+        notes: template.notes,
+        reminderMinutes: template.reminderMinutes,
+        linkedRoutineId: template.linkedRoutineId,
+        linkedGroupRoutineId: template.linkedGroupRoutineId,
+      });
+      addedCount++;
+    }
+  }
+
+  if (toDelete.length) {
+    await prisma.dayPlanEntry.deleteMany({ where: { id: { in: toDelete } } });
+  }
+  const overlaps: OverlapInfo[] = [];
+  if (toCreate.length) {
+    const stillExisting = await prisma.dayPlanEntry.findMany({
+      where: { userId, date: { lte: next.endDate }, endDate: { gte: next.startDate }, id: { notIn: toDelete } },
+    });
+    for (const row of toCreate) {
+      const conflicts = stillExisting.filter((ex) =>
+        entriesOverlap(row.date as Date, row.startTime as string, row.endDate as Date, row.endTime as string, ex.date, ex.startTime, ex.endDate, ex.endTime)
+      );
+      for (const c of conflicts) overlaps.push(toOverlapInfo(c));
+    }
+    await prisma.dayPlanEntry.createMany({ data: toCreate });
+  }
+
+  return { addedCount, removedCount, keptCustomizedCount, overlaps };
+}
+
+/** Full DayPlan metadata edit, including its date range/recurrence/timezone. Past entries
+ * (date < today) are never touched by this function under any circumstances. When the
+ * schedule (date range and/or recurrence) actually changes and `syncFutureEntries` is
+ * requested, future occurrences of every recurring block are reconciled to match the new
+ * schedule: occurrences no longer expected are removed, newly-expected ones are created
+ * from the block's template -- except individually customized occurrences
+ * (`isCustomized`), which are always preserved regardless of the new schedule. Without
+ * `syncFutureEntries` (the default), only the DayPlan container's own fields change and
+ * already-materialized entries are left completely alone -- the original, more
+ * conservative behavior, still used by callers that only want to rename/recolor a plan. */
 export async function updateDayPlan(
   userId: string,
   dayPlanId: string,
@@ -314,10 +439,33 @@ export async function updateDayPlan(
     recurrenceDays: number[];
     reminderMinutes: number | null;
     archived: boolean;
-  }>
+  }>,
+  opts: { syncFutureEntries?: boolean } = {}
 ) {
   const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
   if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+
+  const newStart = patch.startDate ? parseDateKey(patch.startDate) : plan.startDate;
+  const newEnd = patch.endDate ? parseDateKey(patch.endDate) : plan.endDate;
+  if (patch.startDate || patch.endDate) assertValidRange(newStart, newEnd);
+  const newRecurrenceType = patch.recurrenceType ?? plan.recurrenceType;
+  const newRecurrenceDays = patch.recurrenceDays ?? plan.recurrenceDays;
+
+  const scheduleChanged =
+    dateKey(newStart) !== dateKey(plan.startDate) ||
+    dateKey(newEnd) !== dateKey(plan.endDate) ||
+    newRecurrenceType !== plan.recurrenceType ||
+    JSON.stringify([...newRecurrenceDays].sort((a, b) => a - b)) !== JSON.stringify([...plan.recurrenceDays].sort((a, b) => a - b));
+
+  let sync: { addedCount: number; removedCount: number; keptCustomizedCount: number; overlaps: OverlapInfo[] } | null = null;
+  if (opts.syncFutureEntries && scheduleChanged) {
+    sync = await syncFutureSeriesEntries(
+      userId,
+      dayPlanId,
+      plan,
+      { startDate: newStart, endDate: newEnd, recurrenceType: newRecurrenceType, recurrenceDays: newRecurrenceDays }
+    );
+  }
 
   const data: Prisma.DayPlanUpdateInput = {
     title: patch.title,
@@ -325,20 +473,16 @@ export async function updateDayPlan(
     timeZone: patch.timeZone,
     color: patch.color,
     icon: patch.icon,
-    recurrenceType: patch.recurrenceType,
-    recurrenceDays: patch.recurrenceDays,
+    recurrenceType: newRecurrenceType,
+    recurrenceDays: newRecurrenceDays,
     reminderMinutes: patch.reminderMinutes,
     archived: patch.archived,
+    startDate: newStart,
+    endDate: newEnd,
   };
-  if (patch.startDate || patch.endDate) {
-    const newStart = patch.startDate ? parseDateKey(patch.startDate) : plan.startDate;
-    const newEnd = patch.endDate ? parseDateKey(patch.endDate) : plan.endDate;
-    assertValidRange(newStart, newEnd);
-    data.startDate = newStart;
-    data.endDate = newEnd;
-  }
 
-  return prisma.dayPlan.update({ where: { id: dayPlanId }, data });
+  const updated = await prisma.dayPlan.update({ where: { id: dayPlanId }, data });
+  return { plan: updated, sync };
 }
 
 export async function deleteDayPlan(userId: string, dayPlanId: string) {
@@ -388,6 +532,330 @@ export async function addEntryToPlan(userId: string, dayPlanId: string, e: Entry
   await prisma.dayPlanEntry.createMany({ data: rows });
   const entries = await prisma.dayPlanEntry.findMany({ where: { dayPlanId: plan.id, seriesId }, orderBy: { date: "asc" } });
   return { entries, overlaps };
+}
+
+// ---------- Series-block overview & editing ----------
+// A recurring DayPlan block is materialized as one DayPlanEntry row per matching calendar
+// day, all sharing one `seriesId` (assigned once per block when it's added to the plan --
+// see createDayPlan/addEntryToPlan above). Editing "the whole plan" should feel like
+// editing a short list of blocks (one row per seriesId), not a wall of individual dated
+// entries -- `getDayPlanOverview` collapses each series back down to that single
+// "template" (its earliest non-customized occurrence stands in for the shape everyone else
+// in the series shares) plus small summaries of what has diverged from it.
+
+export type SeriesBlockOverview = {
+  seriesId: string;
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  endsNextDay: boolean;
+  category: DayPlanEntry["category"];
+  priority: DayPlanEntry["priority"];
+  color: string;
+  icon: string;
+  location: string | null;
+  link: string | null;
+  notes: string | null;
+  reminderMinutes: number | null;
+  linkedRoutineId: string | null;
+  linkedGroupRoutineId: string | null;
+  sortOrder: number;
+  totalCount: number;
+  futureCount: number;
+  pastCount: number;
+  customizedDays: Array<{ entryId: string; date: string; title: string }>;
+  missingDays: string[];
+};
+
+export async function getDayPlanOverview(userId: string, dayPlanId: string) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId }, include: { entries: true } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+
+  const expectedKeys = generateDayPlanDates(plan.startDate, plan.endDate, plan.recurrenceType, plan.recurrenceDays).map(dateKey);
+  const today = todayDateOnly();
+  const todayKey = dateKey(today);
+
+  const bySeries = new Map<string, DayPlanEntry[]>();
+  const extras: DayPlanEntry[] = [];
+  for (const e of plan.entries) {
+    if (e.seriesId) {
+      const arr = bySeries.get(e.seriesId) ?? [];
+      arr.push(e);
+      bySeries.set(e.seriesId, arr);
+    } else {
+      extras.push(e);
+    }
+  }
+
+  const blocks: SeriesBlockOverview[] = [...bySeries.entries()]
+    .map(([seriesId, seriesEntries]) => {
+      const sorted = seriesEntries.slice().sort((a, b) => a.date.getTime() - b.date.getTime());
+      const template = pickSeriesTemplate(seriesEntries, today);
+      const actualKeys = new Set(sorted.map((e) => dateKey(e.date)));
+      const customizedDays = sorted
+        .filter((e) => e.isCustomized)
+        .map((e) => ({ entryId: e.id, date: dateKey(e.date), title: e.title }));
+      const missingDays = expectedKeys.filter((k) => k >= todayKey && !actualKeys.has(k));
+      const futureCount = sorted.filter((e) => dateKey(e.date) >= todayKey).length;
+      return {
+        seriesId,
+        title: template.title,
+        description: template.description,
+        startTime: template.startTime,
+        endTime: template.endTime,
+        endsNextDay: template.endDate.getTime() !== template.date.getTime(),
+        category: template.category,
+        priority: template.priority,
+        color: template.color,
+        icon: template.icon,
+        location: template.location,
+        link: template.link,
+        notes: template.notes,
+        reminderMinutes: template.reminderMinutes,
+        linkedRoutineId: template.linkedRoutineId,
+        linkedGroupRoutineId: template.linkedGroupRoutineId,
+        sortOrder: template.sortOrder,
+        totalCount: sorted.length,
+        futureCount,
+        pastCount: sorted.length - futureCount,
+        customizedDays,
+        missingDays,
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.startTime.localeCompare(b.startTime));
+
+  return { plan, blocks, extras, expectedOccurrenceCount: expectedKeys.length };
+}
+
+export type SeriesBlockPatch = Partial<{
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  endsNextDay: boolean;
+  category: DayPlanEntry["category"];
+  priority: DayPlanEntry["priority"];
+  color: string;
+  icon: string;
+  location: string | null;
+  link: string | null;
+  notes: string | null;
+  reminderMinutes: number | null;
+  linkedRoutineId: string | null;
+  linkedGroupRoutineId: string | null;
+}>;
+
+/** Edits every future (>= today), not-yet-customized occurrence of one recurring block at
+ * once -- the "edit the template" operation behind the compact plan editor. Past
+ * occurrences are never touched. Individually customized occurrences are skipped by
+ * default (their per-day adjustment is preserved) unless `includeCustomized` is set, in
+ * which case they're overwritten and revert to following the series again. */
+export async function updateSeriesBlock(
+  userId: string,
+  dayPlanId: string,
+  seriesId: string,
+  patch: SeriesBlockPatch,
+  opts: { includeCustomized?: boolean } = {}
+) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+  if (patch.linkedRoutineId !== undefined || patch.linkedGroupRoutineId !== undefined) {
+    await assertOwnedLinks(userId, patch.linkedRoutineId, patch.linkedGroupRoutineId);
+  }
+
+  const today = todayDateOnly();
+  const where: Prisma.DayPlanEntryWhereInput = { dayPlanId, seriesId, userId, date: { gte: today } };
+  if (!opts.includeCustomized) where.isCustomized = false;
+  const targets = await prisma.dayPlanEntry.findMany({ where });
+  if (targets.length === 0) {
+    throw new DayPlanError("Kein zukünftiger Termin für diesen Zeitblock gefunden.", "ENTRY_NOT_FOUND");
+  }
+
+  const { endsNextDay, startTime: patchStart, endTime: patchEnd, ...rest } = patch;
+  const updated: DayPlanEntry[] = [];
+  for (const e of targets) {
+    const dayOffset = Math.round((e.endDate.getTime() - e.date.getTime()) / 86400000);
+    const newStartTime = patchStart ?? e.startTime;
+    const newEndTime = patchEnd ?? e.endTime;
+    const newEndDate = endsNextDay !== undefined ? addDaysUtc(e.date, endsNextDay ? 1 : 0) : addDaysUtc(e.date, dayOffset);
+    assertValidEntryRange(e.date, newStartTime, newEndDate, newEndTime);
+
+    const data: Prisma.DayPlanEntryUncheckedUpdateInput = {
+      title: rest.title,
+      description: rest.description,
+      category: rest.category,
+      priority: rest.priority,
+      color: rest.color,
+      icon: rest.icon,
+      location: rest.location,
+      link: rest.link,
+      notes: rest.notes,
+      reminderMinutes: rest.reminderMinutes,
+      linkedRoutineId: rest.linkedRoutineId,
+      linkedGroupRoutineId: rest.linkedGroupRoutineId,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      endDate: newEndDate,
+      // A template-level edit re-aligns the occurrence with its series -- if it was
+      // customized and got included anyway (`includeCustomized`), it now matches the
+      // template again and stops counting as an exception.
+      isCustomized: opts.includeCustomized ? false : undefined,
+    };
+    updated.push(await prisma.dayPlanEntry.update({ where: { id: e.id }, data }));
+  }
+
+  const overlaps: OverlapInfo[] = [];
+  for (const u of updated) {
+    const conflicts = await findOverlappingEntries(userId, u.date, u.startTime, u.endDate, u.endTime, u.id);
+    for (const c of conflicts) overlaps.push(toOverlapInfo(c));
+  }
+
+  const keptCustomizedCount = opts.includeCustomized
+    ? 0
+    : await prisma.dayPlanEntry.count({ where: { dayPlanId, seriesId, userId, date: { gte: today }, isCustomized: true } });
+
+  return { updatedCount: updated.length, keptCustomizedCount, overlaps };
+}
+
+/** Removes every future (>= today), not-yet-customized occurrence of one recurring block.
+ * Past occurrences are always kept (so history/stats stay intact); customized ones are
+ * kept unless `includeCustomized` is set. */
+export async function deleteSeriesBlock(userId: string, dayPlanId: string, seriesId: string, opts: { includeCustomized?: boolean } = {}) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+
+  const today = todayDateOnly();
+  const where: Prisma.DayPlanEntryWhereInput = { dayPlanId, seriesId, userId, date: { gte: today } };
+  if (!opts.includeCustomized) where.isCustomized = false;
+  const targets = await prisma.dayPlanEntry.findMany({ where });
+  await prisma.dayPlanEntry.deleteMany({ where: { id: { in: targets.map((e) => e.id) } } });
+
+  const keptCustomizedCount = opts.includeCustomized
+    ? 0
+    : await prisma.dayPlanEntry.count({ where: { dayPlanId, seriesId, userId, date: { gte: today }, isCustomized: true } });
+
+  return { deletedCount: targets.length, keptCustomizedCount };
+}
+
+/** Reorders whole blocks (all occurrences of each seriesId, including past ones -- display
+ * order is cosmetic, not stats-affecting, so there's no reason to protect history from
+ * it). `orderedSeriesIds` must list every seriesId currently in the plan. */
+export async function reorderSeriesBlocks(userId: string, dayPlanId: string, orderedSeriesIds: string[]) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+  await Promise.all(
+    orderedSeriesIds.map((seriesId, i) => prisma.dayPlanEntry.updateMany({ where: { dayPlanId, seriesId, userId }, data: { sortOrder: i } }))
+  );
+}
+
+/** Re-aligns one customized occurrence back to what the rest of its series looks like
+ * (its own date/status are kept -- only the block's "shape" is restored). */
+export async function resetEntryToTemplate(userId: string, entryId: string) {
+  const entry = await prisma.dayPlanEntry.findUnique({ where: { id: entryId } });
+  if (!entry || entry.userId !== userId) throw new DayPlanError("Eintrag nicht gefunden.", "ENTRY_NOT_FOUND");
+  if (!entry.seriesId) throw new DayPlanError("Dieser Eintrag gehört zu keiner Serie.", "ENTRY_NOT_FOUND");
+
+  const siblings = await prisma.dayPlanEntry.findMany({ where: { seriesId: entry.seriesId, userId, id: { not: entry.id } } });
+  if (siblings.every((e) => e.isCustomized)) throw new DayPlanError("Keine ursprüngliche Vorlage für diesen Zeitblock gefunden.", "ENTRY_NOT_FOUND");
+  const template = pickSeriesTemplate(siblings, todayDateOnly());
+
+  const dayOffset = Math.round((template.endDate.getTime() - template.date.getTime()) / 86400000);
+  const newEndDate = addDaysUtc(entry.date, dayOffset);
+  assertValidEntryRange(entry.date, template.startTime, newEndDate, template.endTime);
+
+  const updated = await prisma.dayPlanEntry.update({
+    where: { id: entryId },
+    data: {
+      title: template.title,
+      description: template.description,
+      startTime: template.startTime,
+      endTime: template.endTime,
+      endDate: newEndDate,
+      category: template.category,
+      priority: template.priority,
+      color: template.color,
+      icon: template.icon,
+      location: template.location,
+      link: template.link,
+      notes: template.notes,
+      reminderMinutes: template.reminderMinutes,
+      linkedRoutineId: template.linkedRoutineId,
+      linkedGroupRoutineId: template.linkedGroupRoutineId,
+      isCustomized: false,
+    },
+  });
+  return { entry: updated };
+}
+
+/** Recreates a series occurrence that was deleted for just one day (a "missing day"
+ * exception), cloned from the series' current template. */
+export async function restoreSeriesOccurrence(userId: string, dayPlanId: string, seriesId: string, dateStr: string) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+
+  const date = parseDateKey(dateStr);
+  const existing = await prisma.dayPlanEntry.findFirst({ where: { seriesId, userId, date } });
+  if (existing) throw new DayPlanError("An diesem Tag existiert bereits ein Eintrag für diesen Zeitblock.", "TIME_OVERLAP");
+
+  const siblings = await prisma.dayPlanEntry.findMany({ where: { seriesId, userId } });
+  if (siblings.length === 0) throw new DayPlanError("Keine Vorlage für diese Serie gefunden.", "ENTRY_NOT_FOUND");
+  const template = pickSeriesTemplate(siblings, todayDateOnly());
+
+  const dayOffset = Math.round((template.endDate.getTime() - template.date.getTime()) / 86400000);
+  const endDate = addDaysUtc(date, dayOffset);
+  assertValidEntryRange(date, template.startTime, endDate, template.endTime);
+  const overlaps = (await findOverlappingEntries(userId, date, template.startTime, endDate, template.endTime)).map(toOverlapInfo);
+
+  const created = await prisma.dayPlanEntry.create({
+    data: {
+      userId,
+      dayPlanId,
+      seriesId,
+      date,
+      endDate,
+      title: template.title,
+      description: template.description,
+      startTime: template.startTime,
+      endTime: template.endTime,
+      sortOrder: template.sortOrder,
+      category: template.category,
+      priority: template.priority,
+      color: template.color,
+      icon: template.icon,
+      location: template.location,
+      link: template.link,
+      notes: template.notes,
+      reminderMinutes: template.reminderMinutes,
+      linkedRoutineId: template.linkedRoutineId,
+      linkedGroupRoutineId: template.linkedGroupRoutineId,
+    },
+  });
+  return { entry: created, overlaps };
+}
+
+/** "Zukünftige Serie beenden": stops the plan from having any more future occurrences from
+ * today onward, without touching past entries or history. Removes future non-customized
+ * entries (customized ones are kept) and clamps the plan's own endDate so it can't
+ * generate any more via `addEntryToPlan`/schedule syncs either. */
+export async function endDayPlanSeries(userId: string, dayPlanId: string) {
+  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
+  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
+
+  const today = todayDateOnly();
+  const yesterday = addDaysUtc(today, -1);
+  const removable = await prisma.dayPlanEntry.findMany({ where: { dayPlanId, userId, date: { gte: today }, isCustomized: false } });
+  if (removable.length) await prisma.dayPlanEntry.deleteMany({ where: { id: { in: removable.map((e) => e.id) } } });
+  const keptCustomizedCount = await prisma.dayPlanEntry.count({ where: { dayPlanId, userId, date: { gte: today }, isCustomized: true } });
+
+  // Clamp endDate to "yesterday" so no future occurrence can be generated again -- but
+  // never push it below startDate (a plan that hasn't started yet just collapses to a
+  // single day) or above its current endDate (this action only ever shortens a plan).
+  const cappedEnd = yesterday >= plan.startDate ? yesterday : plan.startDate;
+  const newEndDate = plan.endDate < cappedEnd ? plan.endDate : cappedEnd;
+  const updated = await prisma.dayPlan.update({ where: { id: dayPlanId }, data: { endDate: newEndDate } });
+
+  return { plan: updated, removedCount: removable.length, keptCustomizedCount };
 }
 
 // ---------- Standalone / single entries ----------
@@ -521,7 +989,13 @@ export type EntryPatch = Partial<{
   linkedGroupRoutineId: string | null;
 }>;
 
-export async function updateEntry(userId: string, entryId: string, patch: EntryPatch, scope: Scope = "THIS") {
+export async function updateEntry(
+  userId: string,
+  entryId: string,
+  patch: EntryPatch,
+  scope: Scope = "THIS",
+  opts: { includeCustomized?: boolean } = {}
+) {
   const entry = await prisma.dayPlanEntry.findUnique({ where: { id: entryId } });
   if (!entry || entry.userId !== userId) throw new DayPlanError("Eintrag nicht gefunden.", "ENTRY_NOT_FOUND");
   if (patch.linkedRoutineId !== undefined || patch.linkedGroupRoutineId !== undefined) {
@@ -531,8 +1005,14 @@ export async function updateEntry(userId: string, entryId: string, patch: EntryP
   const targets = await resolveScopeTargets(userId, entry, scope);
   const today = todayDateOnly();
   // Never silently rewrite history: past days are always excluded from bulk scope edits.
-  const editable = targets.filter((e) => e.date >= today || e.id === entry.id);
-  const skippedPast = targets.length - editable.length;
+  const notPast = targets.filter((e) => e.date >= today || e.id === entry.id);
+  const skippedPast = targets.length - notPast.length;
+  // A FOLLOWING/ALL bulk edit must not silently overwrite days the user already
+  // individually customized -- unless explicitly told to (`includeCustomized`). The
+  // directly-targeted entry is always editable regardless, even if it's itself customized.
+  const protectCustomized = scope !== "THIS" && !opts.includeCustomized;
+  const editable = protectCustomized ? notPast.filter((e) => !e.isCustomized || e.id === entry.id) : notPast;
+  const skippedCustomized = notPast.length - editable.length;
 
   const { date: patchDate, endDate: patchEndDate, endsNextDay, ...rest } = patch;
   const updated: DayPlanEntry[] = [];
@@ -574,24 +1054,32 @@ export async function updateEntry(userId: string, entryId: string, patch: EntryP
       endDate: newEndDate,
       startTime: newStartTime,
       endTime: newEndTime,
+      // Explicitly editing just "this" occurrence of a recurring series marks it as an
+      // intentional per-day exception, so later template-level edits skip it by default
+      // (see updateSeriesBlock) instead of silently clobbering the adjustment. A
+      // FOLLOWING/ALL edit re-aligns entries with the series, so it clears the flag.
+      isCustomized: scope === "THIS" && entry.seriesId ? true : scope !== "THIS" ? false : undefined,
     };
     updated.push(await prisma.dayPlanEntry.update({ where: { id: e.id }, data }));
   }
 
-  return { updated, skippedPast };
+  return { updated, skippedPast, skippedCustomized };
 }
 
-export async function deleteEntry(userId: string, entryId: string, scope: Scope = "THIS") {
+export async function deleteEntry(userId: string, entryId: string, scope: Scope = "THIS", opts: { includeCustomized?: boolean } = {}) {
   const entry = await prisma.dayPlanEntry.findUnique({ where: { id: entryId } });
   if (!entry || entry.userId !== userId) throw new DayPlanError("Eintrag nicht gefunden.", "ENTRY_NOT_FOUND");
 
   const targets = await resolveScopeTargets(userId, entry, scope);
   const today = todayDateOnly();
-  const editable = targets.filter((e) => e.date >= today || e.id === entry.id);
-  const skippedPast = targets.length - editable.length;
+  const notPast = targets.filter((e) => e.date >= today || e.id === entry.id);
+  const skippedPast = targets.length - notPast.length;
+  const protectCustomized = scope !== "THIS" && !opts.includeCustomized;
+  const editable = protectCustomized ? notPast.filter((e) => !e.isCustomized || e.id === entry.id) : notPast;
+  const skippedCustomized = notPast.length - editable.length;
 
   await prisma.dayPlanEntry.deleteMany({ where: { id: { in: editable.map((e) => e.id) } } });
-  return { deletedCount: editable.length, skippedPast };
+  return { deletedCount: editable.length, skippedPast, skippedCustomized };
 }
 
 export async function moveEntry(
@@ -629,6 +1117,9 @@ export async function moveEntry(
       endTime: newEndTime,
       status: "MOVED",
       moveReason: input.reason ?? null,
+      // Moving one occurrence off its regular series slot (a different day and/or time
+      // than the rest of the block) is a per-day exception, same as a THIS-scope edit.
+      isCustomized: entry.seriesId ? true : undefined,
     },
   });
   return { entry: updated, overlaps };
@@ -640,13 +1131,6 @@ export async function setEntryStatus(userId: string, entryId: string, status: "P
   return prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status, completedAt: null } });
 }
 
-export async function reorderEntries(userId: string, dayPlanId: string, orderedEntryIds: string[]) {
-  const plan = await prisma.dayPlan.findUnique({ where: { id: dayPlanId } });
-  if (!plan || plan.userId !== userId) throw new DayPlanError("Tagesplan nicht gefunden.", "PLAN_NOT_FOUND");
-  const owned = await prisma.dayPlanEntry.findMany({ where: { id: { in: orderedEntryIds }, dayPlanId, userId } });
-  if (owned.length !== orderedEntryIds.length) throw new DayPlanError("Eintrag nicht gefunden.", "ENTRY_NOT_FOUND");
-  await Promise.all(orderedEntryIds.map((id, i) => prisma.dayPlanEntry.update({ where: { id }, data: { sortOrder: i } })));
-}
 
 // ---------- Completion (with Routine / GroupRoutine linking + XP dedup) ----------
 

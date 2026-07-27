@@ -524,7 +524,11 @@ export function EntryFormModal({
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-[#8D8998]">Bereits vergangene Termine werden dabei nie verändert.</p>
+              <p className="text-[11px] text-[#8D8998]">
+                {scope === "THIS"
+                  ? "Nur dieser Tag wird angepasst und bleibt erhalten, wenn du später den ganzen Tagesplan bearbeitest."
+                  : "Bereits vergangene Termine werden dabei nie verändert."}
+              </p>
             </div>
           )}
 

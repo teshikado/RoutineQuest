@@ -473,6 +473,11 @@ model DayPlanEntry {
   startTime            String               // "HH:mm", local wall-clock time in the plan's timeZone
   endTime              String               // "HH:mm"
   sortOrder            Int                  @default(0)
+  /// True once this occurrence was edited independently of its series (via a THIS-scope
+  /// edit) -- marks it as an intentional per-day exception so later bulk edits to the
+  /// series template (see DayPlan block editing) skip it by default instead of silently
+  /// overwriting the user's manual adjustment.
+  isCustomized         Boolean              @default(false)
   category             DayPlanEntryCategory @default(OTHER)
   priority             DayPlanEntryPriority @default(NORMAL)
   status               DayPlanEntryStatus   @default(PLANNED)

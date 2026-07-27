@@ -418,6 +418,12 @@ export function DayPlanningClient({ xpForDayPlanning }: { xpForDayPlanning: bool
           setManagePlanId(null);
         }}
         onChanged={fetchEntries}
+        onNavigateToDay={(dateKeyStr) => {
+          setManageOpen(false);
+          setManagePlanId(null);
+          setSelectedDateKey(dateKeyStr);
+          setView("day");
+        }}
       />
 
       {!xpForDayPlanning && (
