@@ -1138,6 +1138,9 @@ export type ToggleEntryResult = {
   entry: DayPlanEntry;
   xpDelta: number;
   linkedAction: "routine" | "groupRoutine" | null;
+  leveledUp: boolean;
+  level: number | null;
+  rankedUp: boolean;
 };
 
 export async function toggleEntryComplete(userId: string, entryId: string): Promise<ToggleEntryResult> {
@@ -1164,11 +1167,14 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
       }
     }
     const updated = await prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status: "PLANNED", completedAt: null } });
-    return { entry: updated, xpDelta: 0, linkedAction: null };
+    return { entry: updated, xpDelta: 0, linkedAction: null, leveledUp: false, level: null, rankedUp: false };
   }
 
   let xpDelta = 0;
   let linkedAction: "routine" | "groupRoutine" | null = null;
+  let leveledUp = false;
+  let level: number | null = null;
+  let rankedUp = false;
 
   if (entry.linkedRoutineId) {
     const existing = await prisma.completion.findUnique({
@@ -1180,6 +1186,9 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
         if (result.action === "completed") {
           xpDelta = result.xpDelta;
           linkedAction = "routine";
+          leveledUp = result.leveledUp;
+          level = result.level;
+          rankedUp = result.rankedUp;
         }
       } catch (err) {
         if (!(err instanceof CompletionError)) throw err;
@@ -1195,6 +1204,9 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
         if (result.action === "completed") {
           xpDelta = result.xpDelta;
           linkedAction = "groupRoutine";
+          leveledUp = result.leveledUp;
+          level = result.level;
+          rankedUp = result.rankedUp;
         }
       } catch (err) {
         if (!(err instanceof GroupRoutineCompletionError)) throw err;
@@ -1218,7 +1230,7 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
   }
 
   const updated = await prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status: "DONE", completedAt: new Date() } });
-  return { entry: updated, xpDelta, linkedAction };
+  return { entry: updated, xpDelta, linkedAction, leveledUp, level, rankedUp };
 }
 
 // ---------- Templates ----------

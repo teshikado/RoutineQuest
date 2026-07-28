@@ -205,6 +205,19 @@ export const reorderSeriesBlocksSchema = z.object({
   seriesIds: z.array(z.string().min(1)).min(1).max(50),
 });
 
+export const dashboardOrderSaveSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        itemType: z.enum(["PERSONAL_ROUTINE", "GROUP_ROUTINE"]),
+        itemId: z.string().min(1),
+        sortOrder: z.number().int().min(0).max(9999),
+      })
+    )
+    .min(1)
+    .max(200),
+});
+
 export const dayPlanEntryMoveSchema = z.object({
   date: dateKeySchema,
   startTime: timeSchema,

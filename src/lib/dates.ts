@@ -60,6 +60,38 @@ export function todayDateOnly(): Date {
   return toDateOnly(new Date());
 }
 
+/** The current wall-clock time in `TIME_ZONE`, as "HH:mm" -- used to compare against a
+ * DayPlanEntry's own "HH:mm" fields (e.g. "is this entry still ahead of us today"). */
+export function nowHHmmInTimeZone(): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(
+    new Date()
+  );
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== "literal") map[part.type] = part.value;
+  }
+  return `${map.hour}:${map.minute}`;
+}
+
+/** Whether a DayPlanEntry (identified just by its own date-key/status fields, so this can
+ * be reused both server-side and in the "use client" dashboard) hasn't ended yet as of
+ * `todayKey`/`nowHHmm`. An entry whose end day is strictly after today hasn't ended
+ * regardless of its end time (e.g. a block spanning midnight is still "ahead" right after
+ * midnight); one ending today is compared against the current wall-clock time. Used to
+ * pick the dashboard's "nächster Termin" from a day's entries the same way on the server
+ * (initial render) and in the client (after an optimistic toggle). */
+export function isDayPlanEntryStillAhead(
+  status: string,
+  endDateKey: string,
+  endTime: string,
+  todayKey: string,
+  nowHHmm: string
+): boolean {
+  if (status === "DONE" || status === "SKIPPED") return false;
+  if (endDateKey > todayKey) return true;
+  return endTime > nowHHmm;
+}
+
 /** ISO weekday: 1 = Monday ... 7 = Sunday. */
 export function isoWeekday(date: Date): number {
   const day = date.getUTCDay();

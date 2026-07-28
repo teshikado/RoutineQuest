@@ -121,6 +121,11 @@ enum DayReviewMood {
   BAD
 }
 
+enum DashboardItemType {
+  PERSONAL_ROUTINE
+  GROUP_ROUTINE
+}
+
 // ---------- Core user ----------
 
 model User {
@@ -157,6 +162,7 @@ model User {
   dayPlanEntries     DayPlanEntry[]
   dayPlanTemplates   DayPlanTemplate[]
   dayReviews         DayReview[]
+  dashboardItemOrders DashboardItemOrder[]
 
   @@index([email])
   @@index([username])
@@ -555,5 +561,27 @@ model DayReview {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([userId])
+}
+
+// ---------- Dashboard: user-defined manual ordering of open "Heute" items ----------
+// One row per personal routine or group routine the user has explicitly repositioned via
+// the dashboard's "Reihenfolge ändern" editor. Only open (not-yet-completed) items are
+// ever written here -- absence of a row for an item means "use the default time-based
+// sort". itemId loosely references Routine.id or GroupRoutine.id depending on itemType
+// (no FK, since a single column can't target two different tables) -- rows for
+// since-deleted routines are simply ignored by the dashboard query that joins against the
+// live routine lists, so no separate cleanup job is needed.
+model DashboardItemOrder {
+  id        String            @id @default(cuid())
+  userId    String
+  itemType  DashboardItemType
+  itemId    String
+  sortOrder Int
+  updatedAt DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemType, itemId])
   @@index([userId])
 }

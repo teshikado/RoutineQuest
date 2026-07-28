@@ -9,18 +9,16 @@ export async function getDashboardData(userId: string) {
   const board = await getDayBoard(userId, today);
   const groupBoard = await getGroupRoutineDayBoard(userId, today);
 
+  // Interval overlap, not `date: today` -- a block that started yesterday and crosses
+  // midnight into today (e.g. 22:00-02:00) must still show up as "today's" entry even
+  // though its own `date` is yesterday. Ordered by (date, startTime) rather than just
+  // startTime so such an overnight entry sorts correctly relative to today's own entries.
   const todayPlanEntries = await prisma.dayPlanEntry.findMany({
-    where: { userId, date: today },
-    orderBy: { startTime: "asc" },
+    where: { userId, date: { lte: today }, endDate: { gte: today } },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
-  const nowHHmm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const nextPlanEntry =
-    todayPlanEntries.find((e) => e.status !== "DONE" && e.status !== "SKIPPED" && e.endTime > nowHHmm) ?? null;
-  const dayPlanStats = {
-    total: todayPlanEntries.length,
-    done: todayPlanEntries.filter((e) => e.status === "DONE").length,
-    open: todayPlanEntries.filter((e) => e.status !== "DONE" && e.status !== "SKIPPED").length,
-  };
+
+  const manualOrder = await prisma.dashboardItemOrder.findMany({ where: { userId } });
 
   const week = getWeekInfo(today);
   const weekRoutines = await prisma.routine.findMany({
@@ -54,8 +52,22 @@ export async function getDashboardData(userId: string) {
     board,
     groupBoard,
     weekMini,
-    nextPlanEntry,
-    dayPlanStats,
+    // Lean today-relevant fields only -- the client recomputes "next open entry" /
+    // done-open stats itself (see dashboard-client.tsx) so it can react instantly to a
+    // dashboard-side toggle without a full page reload.
+    todayPlanEntries: todayPlanEntries.map((e) => ({
+      id: e.id,
+      title: e.title,
+      icon: e.icon,
+      color: e.color,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      endDateKey: dateKey(e.endDate),
+      status: e.status,
+      linkedRoutineId: e.linkedRoutineId,
+      linkedGroupRoutineId: e.linkedGroupRoutineId,
+    })),
+    manualOrder: manualOrder.map((m) => ({ itemType: m.itemType, itemId: m.itemId, sortOrder: m.sortOrder })),
     groups: groupsSummary.map((m) => ({
       id: m.group.id,
       name: m.group.name,
@@ -64,4 +76,23 @@ export async function getDashboardData(userId: string) {
       memberCount: m.group._count.members,
     })),
   };
+}
+
+/** Persists the user's manual "Heute" ordering. Only ever called with the open items
+ * currently visible to the user, so this always fully replaces their whole manual order --
+ * there's no partial-update case to reconcile against. */
+export async function saveDashboardOrder(
+  userId: string,
+  items: { itemType: "PERSONAL_ROUTINE" | "GROUP_ROUTINE"; itemId: string; sortOrder: number }[]
+) {
+  await prisma.$transaction([
+    prisma.dashboardItemOrder.deleteMany({ where: { userId } }),
+    prisma.dashboardItemOrder.createMany({
+      data: items.map((i) => ({ userId, itemType: i.itemType, itemId: i.itemId, sortOrder: i.sortOrder })),
+    }),
+  ]);
+}
+
+export async function resetDashboardOrder(userId: string) {
+  await prisma.dashboardItemOrder.deleteMany({ where: { userId } });
 }
