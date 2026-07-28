@@ -115,7 +115,7 @@ type HeuteItem =
 const GENERIC_SAVE_ERROR = "Die Aufgabe konnte nicht gespeichert werden. Bitte versuche es erneut.";
 const GENERIC_UNDO_ERROR = "Die Erledigung konnte nicht rückgängig gemacht werden. Bitte versuche es erneut.";
 const STALE_STATE_ERROR = "Diese Aufgabe wurde bereits aktualisiert. Bitte lade die Seite neu und versuche es erneut.";
-const GENERIC_ORDER_ERROR = "Die neue Reihenfolge konnte nicht gespeichert werden.";
+const GENERIC_ORDER_ERROR = "Die Reihenfolge konnte nicht gespeichert werden. Bitte versuche es erneut.";
 const GENERIC_DAYPLAN_ERROR = "Der Tagesplan-Eintrag konnte nicht gespeichert werden. Bitte versuche es erneut.";
 
 /** A row in the flat, single-`.map()`-rendered "Heute" list -- either a task card or one of
@@ -477,7 +477,7 @@ export function DashboardClient({
 
     setSavingOrder(false);
     if (ok) {
-      showToast("Reihenfolge erfolgreich gespeichert.", "success");
+      showToast("Deine Aufgabenreihenfolge wurde gespeichert.", "success");
     } else {
       setManualOrder(previousManualOrder);
       showToast(GENERIC_ORDER_ERROR, "error");
@@ -681,11 +681,14 @@ export function DashboardClient({
           <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
             <h2 className="font-bold text-[#F8F7FC]">Heute</h2>
             <div className="flex items-center gap-3">
-              {!orderEditing && openHeuteItems.length > 1 && (
+              {!orderEditing && openHeuteItems.length > 0 && (
                 <button
                   type="button"
                   onClick={handleEnterOrderEditing}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-[#A855F7] hover:text-[#C084FC] rounded-lg px-2 py-1 -mr-2 hover:bg-[#171720] transition-colors focus-visible:outline-none"
+                  disabled={openHeuteItems.length < 2}
+                  aria-label={openHeuteItems.length < 2 ? "Mindestens zwei offene Aufgaben werden zum Sortieren benötigt." : undefined}
+                  title={openHeuteItems.length < 2 ? "Mindestens zwei offene Aufgaben werden zum Sortieren benötigt." : undefined}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#A855F7] hover:text-[#C084FC] rounded-lg px-2 py-1 -mr-2 hover:bg-[#171720] transition-colors focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#A855F7]"
                 >
                   <ListOrdered className="h-3.5 w-3.5" /> Reihenfolge ändern
                 </button>
@@ -1097,7 +1100,7 @@ function OrderableRow({
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
-          aria-label={`${title} nach oben verschieben`}
+          aria-label={`${title} eine Position nach oben verschieben`}
           title="Nach oben"
           className="h-8 w-8 rounded-lg flex items-center justify-center text-[#C8C5D2] hover:text-[#A855F7] hover:bg-[#171720] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none"
         >
@@ -1107,7 +1110,7 @@ function OrderableRow({
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
-          aria-label={`${title} nach unten verschieben`}
+          aria-label={`${title} eine Position nach unten verschieben`}
           title="Nach unten"
           className="h-8 w-8 rounded-lg flex items-center justify-center text-[#C8C5D2] hover:text-[#A855F7] hover:bg-[#171720] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none"
         >
