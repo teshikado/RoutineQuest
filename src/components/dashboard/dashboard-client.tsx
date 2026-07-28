@@ -1,10 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { AnimatePresence, motion, Reorder, useDragControls } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Flame,
   Plus,
@@ -211,11 +231,19 @@ export function DashboardClient({
   const [savingOrder, setSavingOrder] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resettingOrder, setResettingOrder] = useState(false);
-  const editOrderRef = useRef<string[]>([]);
-  const draggingKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    editOrderRef.current = editOrder;
-  }, [editOrder]);
+  // The item currently being dragged, if any -- drives the floating DragOverlay preview
+  // (see render below) so the moving card renders above everything else instead of being
+  // clipped by a sibling card's own stacking context.
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+  const dndSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    // A short delay (rather than a distance threshold) is what lets a touch drag be told
+    // apart from a normal finger-scroll on mobile -- see dnd-kit's own recommendation for
+    // touch-enabled sortable lists.
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const progress = useMemo(() => getLevelProgress(data.user.totalXp), [data.user.totalXp]);
   const rank = useMemo(() => getRankForLevel(progress.level), [progress.level]);
@@ -239,6 +267,7 @@ export function DashboardClient({
   const sortedHeuteItems = useMemo(() => sortHeuteItems(heuteItems, manualOrder), [heuteItems, manualOrder]);
   const openHeuteItems = sortedHeuteItems.filter((i) => !i.completed);
   const doneHeuteItems = sortedHeuteItems.filter((i) => i.completed);
+  const activeDragItem = activeDragId ? heuteItemsByKey.get(activeDragId) ?? null : null;
 
   // One single flat array, rendered through one single `.map()` below -- this is what
   // actually matters for a task card to keep its React identity (and therefore its local
@@ -397,17 +426,27 @@ export function DashboardClient({
     if (item) setAnnouncement(`${heuteItemTitle(item)} wurde an Position ${toIndex + 1} verschoben.`);
   }
 
-  function handleDragStart(key: string) {
-    draggingKeyRef.current = key;
+  function handleDndDragStart(event: DragStartEvent) {
+    setActiveDragId(String(event.active.id));
   }
-  function handleDragEnd() {
-    const key = draggingKeyRef.current;
-    draggingKeyRef.current = null;
-    if (!key) return;
-    const index = editOrderRef.current.indexOf(key);
-    if (index === -1) return;
-    const item = heuteItemsByKey.get(key);
-    if (item) setAnnouncement(`${heuteItemTitle(item)} wurde an Position ${index + 1} verschoben.`);
+
+  function handleDndDragEnd(event: DragEndEvent) {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setEditOrder((prev) => {
+      const oldIndex = prev.indexOf(String(active.id));
+      const newIndex = prev.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const next = arrayMove(prev, oldIndex, newIndex);
+      const item = heuteItemsByKey.get(String(active.id));
+      if (item) setAnnouncement(`${heuteItemTitle(item)} wurde an Position ${newIndex + 1} verschoben.`);
+      return next;
+    });
+  }
+
+  function handleDndDragCancel() {
+    setActiveDragId(null);
   }
 
   async function handleSaveOrder() {
@@ -638,7 +677,7 @@ export function DashboardClient({
       </RevealGroup>
 
       <Reveal delay={0.05}>
-        <Card>
+        <Card data-testid="heute-card">
           <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
             <h2 className="font-bold text-[#F8F7FC]">Heute</h2>
             <div className="flex items-center gap-3">
@@ -670,26 +709,38 @@ export function DashboardClient({
               }
             />
           ) : orderEditing ? (
-            <div className="space-y-3">
-              <p className="text-xs text-[#8D8998]">Ziehe eine Aufgabe an ihre neue Position oder nutze die Pfeile, um die Reihenfolge zu ändern.</p>
-              <Reorder.Group axis="y" values={editOrder} onReorder={setEditOrder} className="space-y-2">
-                {editOrder.map((key, index) => {
-                  const item = heuteItemsByKey.get(key);
-                  if (!item) return null;
-                  return (
-                    <OrderableRow
-                      key={key}
-                      item={item}
-                      isFirst={index === 0}
-                      isLast={index === editOrder.length - 1}
-                      onMoveUp={() => moveEditItem(index, -1)}
-                      onMoveDown={() => moveEditItem(index, 1)}
-                      onDragStart={() => handleDragStart(key)}
-                      onDragEnd={handleDragEnd}
-                    />
-                  );
-                })}
-              </Reorder.Group>
+            <div className="space-y-3 rounded-2xl border border-[#A855F7]/40 bg-[#A855F7]/[0.04] p-2.5">
+              <p className="text-xs text-[#C8C5D2] px-0.5">
+                Ziehe eine Aufgabe an ihre neue Position oder nutze die Pfeile, um die Reihenfolge zu ändern.
+              </p>
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDndDragStart}
+                onDragEnd={handleDndDragEnd}
+                onDragCancel={handleDndDragCancel}
+              >
+                <SortableContext items={editOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {editOrder.map((key, index) => {
+                      const item = heuteItemsByKey.get(key);
+                      if (!item) return null;
+                      return (
+                        <OrderableRow
+                          key={key}
+                          item={item}
+                          isFirst={index === 0}
+                          isLast={index === editOrder.length - 1}
+                          onMoveUp={() => moveEditItem(index, -1)}
+                          onMoveDown={() => moveEditItem(index, 1)}
+                          reducedMotion={reducedMotion}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+                <DragOverlay>{activeDragItem ? <OrderableRowPreview item={activeDragItem} /> : null}</DragOverlay>
+              </DndContext>
 
               {doneHeuteItems.length > 0 && (
                 <div className="space-y-2 pt-1">
@@ -948,83 +999,100 @@ export function DashboardClient({
   );
 }
 
+/** True once the OS/browser reports a preference for reduced motion, kept live via the
+ * media query's own change event (covers a user flipping the OS setting without reloading).
+ * Reordering itself must keep working either way -- only the strength of the animation
+ * changes (see `reducedMotion` usage in OrderableRow below). */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
 /** One draggable row in the "Reihenfolge ändern" edit mode -- a read-only preview of the
  * open item (icon/title/time) plus a drag handle and Nach-oben/Nach-unten buttons. Deliberately
  * NOT the full TaskCard/GroupTaskCard: rendering the real completion toggle here would risk
- * firing it by accident while the user is trying to drag or tap an adjacent control. */
+ * firing it by accident while the user is trying to drag or tap an adjacent control.
+ *
+ * Built on dnd-kit's `useSortable` rather than a hand-rolled pointer-event drag: dnd-kit ships
+ * dedicated Mouse/Touch/Keyboard sensors and its own scroll/collision handling, which covers a
+ * much wider range of real devices and input methods than a from-scratch implementation can. */
 function OrderableRow({
   item,
   isFirst,
   isLast,
   onMoveUp,
   onMoveDown,
-  onDragStart,
-  onDragEnd,
+  reducedMotion,
 }: {
   item: HeuteItem;
   isFirst: boolean;
   isLast: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
+  reducedMotion: boolean;
 }) {
-  const controls = useDragControls();
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.key,
+  });
   const title = heuteItemTitle(item);
   const icon = heuteItemIcon(item);
   const color = heuteItemColor(item);
 
-  // Starts the drag on any pointerdown within the grab zone (grip + icon + title), not
-  // just the small 4x4 grip glyph itself -- a real thumb on a phone easily misses a target
-  // that tight, and missing it makes the row feel completely unresponsive even though the
-  // feature "works". `preventDefault` heads off the browser's own touch text-selection
-  // gesture from ever starting and racing the drag for the same pointer.
-  function startDrag(e: ReactPointerEvent) {
-    e.preventDefault();
-    controls.start(e);
-  }
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: reducedMotion ? undefined : transition,
+    // The DragOverlay (see the component above) renders the actual moving card, so the row
+    // left behind here just fades to indicate its slot rather than tracking the pointer itself.
+    opacity: isDragging ? 0.4 : 1,
+  };
 
   return (
-    <Reorder.Item
-      value={item.key}
-      dragListener={false}
-      dragControls={controls}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      whileDrag={{ scale: 1.02, boxShadow: "0 10px 28px rgba(168,85,247,0.35)", zIndex: 10 }}
-      className="flex items-center gap-2 rounded-2xl border border-[#292936] bg-[#111118] p-3 select-none"
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-testid="orderable-row"
+      className={clsx(
+        "flex items-center gap-2 rounded-2xl border p-3 select-none bg-[#111118]",
+        isDragging ? "border-[#A855F7]" : "border-[#292936]"
+      )}
     >
-      <div
-        onPointerDown={startDrag}
-        aria-hidden="true"
+      {/* The whole grip+icon+title zone is the drag handle, not just the small grip glyph --
+          a real thumb on a phone easily misses a target that tight, and missing it makes the
+          row feel completely unresponsive even though the feature "works". It doubles as the
+          dnd-kit keyboard-sensor activator: focusable, with Space/Enter to pick up and arrow
+          keys to move, on top of the Nach-oben/Nach-unten buttons below. */}
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label={`${title} verschieben. Leertaste zum Aufnehmen, Pfeiltasten zum Verschieben, erneut Leertaste zum Ablegen, Escape zum Abbrechen.`}
         title="Ziehen zum Verschieben"
-        className="shrink-0 h-11 w-11 -m-1 flex items-center justify-center rounded-lg text-[#8D8998] hover:text-[#A855F7] hover:bg-[#171720] cursor-grab active:cursor-grabbing transition-colors"
-        style={{ touchAction: "none" }}
+        className="flex items-center gap-2 flex-1 min-w-0 rounded-xl text-left cursor-grab active:cursor-grabbing touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
       >
-        <GripVertical className="h-4 w-4" />
-      </div>
+        <span className="shrink-0 h-11 w-11 -m-1 flex items-center justify-center rounded-lg text-[#8D8998]">
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
+        </span>
 
-      {/* Pointer-only drag zone (grip + icon + title): decorative to assistive tech --
-          dragging isn't keyboard-operable anyway, so screen-reader/keyboard users rely
-          entirely on the properly labeled Nach-oben/Nach-unten buttons below instead. */}
-      <div
-        onPointerDown={startDrag}
-        aria-hidden="true"
-        title="Ziehen zum Verschieben"
-        className="flex items-center gap-2 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
-        style={{ touchAction: "none" }}
-      >
-        <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22" }}>
+        <span aria-hidden="true" className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22" }}>
           <DynamicIcon name={icon} className="h-4 w-4" style={{ color }} />
-        </div>
+        </span>
 
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-[#F8F7FC] truncate">{title}</div>
-          {item.timeOfDay && <div className="text-xs text-[#C8C5D2] tabular-nums">{item.timeOfDay}</div>}
-        </div>
-      </div>
+        <span aria-hidden="true" className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-[#F8F7FC] truncate">{title}</span>
+          {item.timeOfDay && <span className="block text-xs text-[#C8C5D2] tabular-nums">{item.timeOfDay}</span>}
+        </span>
+      </button>
 
-      <div className="flex items-center gap-1 shrink-0" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
           onClick={onMoveUp}
@@ -1046,6 +1114,31 @@ function OrderableRow({
           <ChevronDown className="h-4 w-4" />
         </button>
       </div>
-    </Reorder.Item>
+    </div>
+  );
+}
+
+/** Floating clone shown inside dnd-kit's <DragOverlay> while a row is being dragged -- purely
+ * visual (no sortable hooks, no handlers), rendered above everything else via a portal so it's
+ * never clipped by a sibling card's own stacking context. */
+function OrderableRowPreview({ item }: { item: HeuteItem }) {
+  const title = heuteItemTitle(item);
+  const icon = heuteItemIcon(item);
+  const color = heuteItemColor(item);
+
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-[#A855F7] bg-[#171720] p-3 shadow-[0_14px_32px_rgba(168,85,247,0.45)] scale-[1.02] cursor-grabbing">
+      <span className="shrink-0 h-11 w-11 -m-1 flex items-center justify-center rounded-lg text-[#A855F7]">
+        <GripVertical className="h-4 w-4" />
+      </span>
+      <span className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22" }}>
+        <DynamicIcon name={icon} className="h-4 w-4" style={{ color }} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-semibold text-[#F8F7FC] truncate">{title}</span>
+        {item.timeOfDay && <span className="block text-xs text-[#C8C5D2] tabular-nums">{item.timeOfDay}</span>}
+      </span>
+      <span className="w-[68px] shrink-0" aria-hidden="true" />
+    </div>
   );
 }
