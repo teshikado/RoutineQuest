@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -671,7 +671,7 @@ export function DashboardClient({
             />
           ) : orderEditing ? (
             <div className="space-y-3">
-              <p className="text-xs text-[#8D8998]">Ziehe die Aufgaben am Griff oder nutze die Pfeile, um die Reihenfolge zu ändern.</p>
+              <p className="text-xs text-[#8D8998]">Ziehe eine Aufgabe an ihre neue Position oder nutze die Pfeile, um die Reihenfolge zu ändern.</p>
               <Reorder.Group axis="y" values={editOrder} onReorder={setEditOrder} className="space-y-2">
                 {editOrder.map((key, index) => {
                   const item = heuteItemsByKey.get(key);
@@ -974,6 +974,16 @@ function OrderableRow({
   const icon = heuteItemIcon(item);
   const color = heuteItemColor(item);
 
+  // Starts the drag on any pointerdown within the grab zone (grip + icon + title), not
+  // just the small 4x4 grip glyph itself -- a real thumb on a phone easily misses a target
+  // that tight, and missing it makes the row feel completely unresponsive even though the
+  // feature "works". `preventDefault` heads off the browser's own touch text-selection
+  // gesture from ever starting and racing the drag for the same pointer.
+  function startDrag(e: ReactPointerEvent) {
+    e.preventDefault();
+    controls.start(e);
+  }
+
   return (
     <Reorder.Item
       value={item.key}
@@ -982,28 +992,39 @@ function OrderableRow({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       whileDrag={{ scale: 1.02, boxShadow: "0 10px 28px rgba(168,85,247,0.35)", zIndex: 10 }}
-      className="flex items-center gap-2 rounded-2xl border border-[#292936] bg-[#111118] p-3"
+      className="flex items-center gap-2 rounded-2xl border border-[#292936] bg-[#111118] p-3 select-none"
     >
-      <button
-        type="button"
-        onPointerDown={(e) => controls.start(e)}
-        aria-label={`${title} verschieben, ziehen zum Ändern der Position`}
+      <div
+        onPointerDown={startDrag}
+        aria-hidden="true"
         title="Ziehen zum Verschieben"
-        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg text-[#8D8998] hover:text-[#A855F7] hover:bg-[#171720] cursor-grab active:cursor-grabbing touch-none focus-visible:outline-none"
+        className="shrink-0 h-11 w-11 -m-1 flex items-center justify-center rounded-lg text-[#8D8998] hover:text-[#A855F7] hover:bg-[#171720] cursor-grab active:cursor-grabbing transition-colors"
+        style={{ touchAction: "none" }}
       >
         <GripVertical className="h-4 w-4" />
-      </button>
-
-      <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22" }}>
-        <DynamicIcon name={icon} className="h-4 w-4" style={{ color }} />
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-[#F8F7FC] truncate">{title}</div>
-        {item.timeOfDay && <div className="text-xs text-[#C8C5D2] tabular-nums">{item.timeOfDay}</div>}
+      {/* Pointer-only drag zone (grip + icon + title): decorative to assistive tech --
+          dragging isn't keyboard-operable anyway, so screen-reader/keyboard users rely
+          entirely on the properly labeled Nach-oben/Nach-unten buttons below instead. */}
+      <div
+        onPointerDown={startDrag}
+        aria-hidden="true"
+        title="Ziehen zum Verschieben"
+        className="flex items-center gap-2 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
+        style={{ touchAction: "none" }}
+      >
+        <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22" }}>
+          <DynamicIcon name={icon} className="h-4 w-4" style={{ color }} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-[#F8F7FC] truncate">{title}</div>
+          {item.timeOfDay && <div className="text-xs text-[#C8C5D2] tabular-nums">{item.timeOfDay}</div>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0" onPointerDown={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onMoveUp}
