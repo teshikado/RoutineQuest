@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Undo2 } from "lucide-react";
@@ -31,14 +31,20 @@ export function TaskCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [burst, setBurst] = useState(false);
+  // A ref guard, not just the `busy` state, so a second click that fires before React has
+  // committed/painted the disabled button (e.g. a fast double-click or a synthetic
+  // double-tap) still can't slip through -- refs update synchronously, state doesn't.
+  const inFlightRef = useRef(false);
   const { routine, completed } = data;
   const meta = DIFFICULTY_META[routine.difficulty];
 
   async function handleToggle() {
-    if (busy) return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     if (!completed) setBurst(true);
     await onToggle(routine.id);
+    inFlightRef.current = false;
     setBusy(false);
     setTimeout(() => setBurst(false), 900);
   }
@@ -47,7 +53,8 @@ export function TaskCard({
     <div
       className={clsx(
         "relative flex items-center gap-4 rounded-2xl border p-4 transition-colors",
-        completed ? "bg-[#10241C] border-[#1F6B4A]" : "bg-[#111118] border-[#292936] shadow-[0_2px_12px_rgba(0,0,0,0.4)]"
+        completed ? "bg-[#10241C] border-[#1F6B4A]" : "bg-[#111118] border-[#292936] shadow-[0_2px_12px_rgba(0,0,0,0.4)]",
+        burst && "animate-success-pulse"
       )}
     >
       <div

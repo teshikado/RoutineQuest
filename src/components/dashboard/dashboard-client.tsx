@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Flame, Plus, Users, ChevronRight, CalendarClock } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Flame, Plus, Users, ChevronRight, CalendarClock, PartyPopper } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -52,6 +53,44 @@ type GroupBoardItem = {
   completion: { createdAt: string | Date } | null;
 };
 
+/** One row of "Heute" -- a personal routine or a group routine, reduced to just what the
+ * sort needs. `originalIndex` is the item's position in the server-provided board arrays
+ * (personal routines first, then group routines) -- it never changes as items are
+ * completed/undone, so it acts as the stable "ursprüngliche Reihenfolge" tiebreaker
+ * required for both the open-without-time bucket and the whole completed bucket. */
+type HeuteItem =
+  | { kind: "personal"; key: string; completed: boolean; timeOfDay: string | null; originalIndex: number; data: TaskCardData }
+  | { kind: "group"; key: string; completed: boolean; timeOfDay: string | null; originalIndex: number; data: GroupTaskCardData & { groupId: string } };
+
+const GENERIC_SAVE_ERROR = "Die Aufgabe konnte nicht gespeichert werden. Bitte versuche es erneut.";
+const GENERIC_UNDO_ERROR = "Die Erledigung konnte nicht rückgängig gemacht werden. Bitte versuche es erneut.";
+const STALE_STATE_ERROR = "Diese Aufgabe wurde bereits aktualisiert. Bitte lade die Seite neu und versuche es erneut.";
+
+/** A row in the flat, single-`.map()`-rendered "Heute" list -- either a task card or one of
+ * the two synthetic marker rows (see renderRows in the component below). `kind` is the
+ * actual discriminant (not `key`, which is just a plain string on the "task" variant). */
+type RenderRow = { kind: "task"; key: string; item: HeuteItem } | { kind: "all-done"; key: string } | { kind: "done-divider"; key: string };
+
+function timeOfDayMinutes(t: string | null): number {
+  if (!t) return Number.POSITIVE_INFINITY;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Open tasks first (timed ones by time ascending, then untimed, ties broken by original
+ * order), completed tasks after -- always in their original daily order. Never mutates the
+ * input arrays; always sorts a copy. */
+function sortHeuteItems(items: HeuteItem[]): HeuteItem[] {
+  return [...items].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    if (!a.completed) {
+      const byTime = timeOfDayMinutes(a.timeOfDay) - timeOfDayMinutes(b.timeOfDay);
+      if (byTime !== 0) return byTime;
+    }
+    return a.originalIndex - b.originalIndex;
+  });
+}
+
 export function DashboardClient({
   data,
 }: {
@@ -96,6 +135,10 @@ export function DashboardClient({
     }))
   );
   const [levelUp, setLevelUp] = useState<{ level: number; rankedUp: boolean } | null>(null);
+  // Announced via an aria-live region (see the sr-only div below) -- screen reader users get
+  // the same "moved to Erledigt" / "moved back up" information sighted users get for free
+  // from the reorder animation.
+  const [announcement, setAnnouncement] = useState("");
 
   const progress = useMemo(() => getLevelProgress(data.user.totalXp), [data.user.totalXp]);
   const rank = useMemo(() => getRankForLevel(progress.level), [progress.level]);
@@ -104,6 +147,38 @@ export function DashboardClient({
   const totalCount = board.length + groupBoard.length;
   const dayRatio = totalCount > 0 ? doneCount / totalCount : 0;
 
+  // Personal routines keep their board position, group routines continue right after --
+  // this fixed base order is the "ursprüngliche Reihenfolge" used as the stable tiebreaker
+  // below (see sortHeuteItems), so it must stay derived from the arrays' own indices, never
+  // from anything that changes when a task is completed/undone.
+  const heuteItems: HeuteItem[] = useMemo(
+    () => [
+      ...board.map((b, i): HeuteItem => ({ kind: "personal", key: `personal-${b.routine.id}`, completed: b.completed, timeOfDay: b.routine.timeOfDay, originalIndex: i, data: b })),
+      ...groupBoard.map((b, i): HeuteItem => ({ kind: "group", key: `group-${b.groupRoutine.id}`, completed: b.completed, timeOfDay: b.groupRoutine.timeOfDay, originalIndex: board.length + i, data: b })),
+    ],
+    [board, groupBoard]
+  );
+  const sortedHeuteItems = useMemo(() => sortHeuteItems(heuteItems), [heuteItems]);
+  const openHeuteItems = sortedHeuteItems.filter((i) => !i.completed);
+  const doneHeuteItems = sortedHeuteItems.filter((i) => i.completed);
+
+  // One single flat array, rendered through one single `.map()` below -- this is what
+  // actually matters for a task card to keep its React identity (and therefore its local
+  // `burst`/glow animation state) as it crosses from the open group to the done group.
+  // Two separate `.map()` calls (open items, then done items) look identical on screen but
+  // are NOT equivalent for reconciliation: nested arrays as children don't reliably key-match
+  // across the two lists, so a card moving between them was silently remounting -- its
+  // completion glow (driven by that local state) never had a chance to render. A single flat
+  // list has no such boundary: every card's key is matched positionally against the *whole*
+  // list, so moving from index 2 to index 5 is just a position change, not a remount.
+  const renderRows = useMemo(() => {
+    const rows: RenderRow[] = openHeuteItems.map((item) => ({ kind: "task" as const, key: item.key, item }));
+    if (openHeuteItems.length === 0 && doneHeuteItems.length > 0) rows.push({ kind: "all-done", key: "all-done" });
+    if (doneHeuteItems.length > 0) rows.push({ kind: "done-divider", key: "done-divider" });
+    for (const item of doneHeuteItems) rows.push({ kind: "task", key: item.key, item });
+    return rows;
+  }, [openHeuteItems, doneHeuteItems]);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Guten Morgen" : hour < 18 ? "Guten Tag" : "Guten Abend";
   const today = todayDateOnly();
@@ -111,87 +186,124 @@ export function DashboardClient({
 
   async function handleToggle(routineId: string) {
     const idx = board.findIndex((b) => b.routine.id === routineId);
-    if (idx === -1) return;
+    if (idx === -1) {
+      showToast(STALE_STATE_ERROR, "error");
+      return;
+    }
+    const previous = board[idx];
+    const optimisticCompleted = !previous.completed;
+    const genericError = previous.completed ? GENERIC_UNDO_ERROR : GENERIC_SAVE_ERROR;
 
+    // 1. Optimistic: flip locally right away so the checkbox, strikethrough, and reorder
+    // into the "Erledigt" group all happen instantly, before the server confirms anything.
+    setBoard((prev) => prev.map((b) => (b.routine.id === routineId ? { ...b, completed: optimisticCompleted, canUndo: optimisticCompleted } : b)));
+
+    let res: Response;
     try {
-      const res = await fetch("/api/completions", {
+      res = await fetch("/api/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ routineId, date: todayKey }),
       });
-      const result = await res.json();
-      if (!res.ok) {
-        showToast(result.error ?? "Etwas ist schiefgelaufen.", "error");
-        return;
-      }
-
-      setBoard((prev) =>
-        prev.map((b) =>
-          b.routine.id === routineId
-            ? { ...b, completed: result.action === "completed", canUndo: result.canUndo }
-            : b
-        )
-      );
-
-      if (result.action === "completed") {
-        showToast(`+${result.xpDelta} XP – Stark durchgezogen!`, "xp");
-      } else {
-        showToast("Aufgabe wieder geöffnet.", "info");
-      }
-
-      if (result.leveledUp) {
-        setTimeout(() => setLevelUp({ level: result.level, rankedUp: result.rankedUp }), 600);
-      }
-
-      router.refresh();
     } catch {
-      showToast("Verbindungsfehler. Bitte versuche es erneut.", "error");
+      // A rejected fetch (offline, DNS failure, ...) never carries a server message --
+      // never surface the raw technical error text to the user.
+      setBoard((prev) => prev.map((b) => (b.routine.id === routineId ? previous : b)));
+      showToast(genericError, "error");
+      return;
     }
+
+    const result = await res.json().catch(() => null);
+    if (!res.ok || !result) {
+      // 3. Roll back completely: same completed flag, same position, and a clear,
+      // server-provided (or generic) error -- never left half-applied.
+      setBoard((prev) => prev.map((b) => (b.routine.id === routineId ? previous : b)));
+      showToast(result?.error ?? genericError, "error");
+      return;
+    }
+
+    // 2. Reconcile with the authoritative server result (canUndo's exact 10-minute
+    // window is only known server-side).
+    setBoard((prev) =>
+      prev.map((b) => (b.routine.id === routineId ? { ...b, completed: result.action === "completed", canUndo: result.canUndo } : b))
+    );
+
+    if (result.action === "completed") {
+      showToast(`+${result.xpDelta} XP – Stark durchgezogen!`, "xp");
+      setAnnouncement(`${previous.routine.title} wurde als erledigt markiert und in den erledigten Bereich verschoben.`);
+    } else {
+      showToast("Aufgabe wieder geöffnet.", "info");
+      setAnnouncement(`${previous.routine.title} wurde wieder geöffnet und nach oben verschoben.`);
+    }
+
+    if (result.leveledUp) {
+      setTimeout(() => setLevelUp({ level: result.level, rankedUp: result.rankedUp }), 600);
+    }
+
+    // Refreshes server-rendered numbers this component doesn't own locally (total XP /
+    // level bar, streak, week mini, group leaderboards) without resetting the board
+    // state above, since that lives in useState and isn't re-derived from props.
+    router.refresh();
   }
 
   async function handleGroupToggle(groupRoutineId: string) {
     const idx = groupBoard.findIndex((b) => b.groupRoutine.id === groupRoutineId);
-    if (idx === -1) return;
+    if (idx === -1) {
+      showToast(STALE_STATE_ERROR, "error");
+      return;
+    }
     const groupId = groupBoard[idx].groupId;
+    const previous = groupBoard[idx];
+    const optimisticCompleted = !previous.completed;
+    const genericError = previous.completed ? GENERIC_UNDO_ERROR : GENERIC_SAVE_ERROR;
 
+    setGroupBoard((prev) => prev.map((b) => (b.groupRoutine.id === groupRoutineId ? { ...b, completed: optimisticCompleted, canUndo: optimisticCompleted } : b)));
+
+    let res: Response;
     try {
-      const res = await fetch(`/api/groups/${groupId}/routines/${groupRoutineId}/completions`, {
+      res = await fetch(`/api/groups/${groupId}/routines/${groupRoutineId}/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: todayKey }),
       });
-      const result = await res.json();
-      if (!res.ok) {
-        showToast(result.error ?? "Etwas ist schiefgelaufen.", "error");
-        return;
-      }
-
-      setGroupBoard((prev) =>
-        prev.map((b) =>
-          b.groupRoutine.id === groupRoutineId
-            ? { ...b, completed: result.action === "completed", canUndo: result.canUndo }
-            : b
-        )
-      );
-
-      if (result.action === "completed") {
-        showToast(`Gruppenroutine geschafft – +${result.xpDelta} XP!`, "xp");
-      } else {
-        showToast("Aufgabe wieder geöffnet.", "info");
-      }
-
-      if (result.leveledUp) {
-        setTimeout(() => setLevelUp({ level: result.level, rankedUp: result.rankedUp }), 600);
-      }
-
-      router.refresh();
     } catch {
-      showToast("Verbindungsfehler. Bitte versuche es erneut.", "error");
+      setGroupBoard((prev) => prev.map((b) => (b.groupRoutine.id === groupRoutineId ? previous : b)));
+      showToast(genericError, "error");
+      return;
     }
+
+    const result = await res.json().catch(() => null);
+    if (!res.ok || !result) {
+      setGroupBoard((prev) => prev.map((b) => (b.groupRoutine.id === groupRoutineId ? previous : b)));
+      showToast(result?.error ?? genericError, "error");
+      return;
+    }
+
+    setGroupBoard((prev) =>
+      prev.map((b) => (b.groupRoutine.id === groupRoutineId ? { ...b, completed: result.action === "completed", canUndo: result.canUndo } : b))
+    );
+
+    if (result.action === "completed") {
+      showToast(`Gruppenroutine geschafft – +${result.xpDelta} XP!`, "xp");
+      setAnnouncement(`${previous.groupRoutine.title} wurde als erledigt markiert und in den erledigten Bereich verschoben.`);
+    } else {
+      showToast("Aufgabe wieder geöffnet.", "info");
+      setAnnouncement(`${previous.groupRoutine.title} wurde wieder geöffnet und nach oben verschoben.`);
+    }
+
+    if (result.leveledUp) {
+      setTimeout(() => setLevelUp({ level: result.level, rankedUp: result.rankedUp }), 600);
+    }
+
+    router.refresh();
   }
 
   return (
     <div className="space-y-6">
+      <div aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
+
       <LevelUpModal
         open={!!levelUp}
         onClose={() => setLevelUp(null)}
@@ -264,12 +376,53 @@ export function DashboardClient({
             />
           ) : (
             <div className="space-y-3">
-              {board.map((item) => (
-                <TaskCard key={item.routine.id} data={item} onToggle={handleToggle} />
-              ))}
-              {groupBoard.map((item) => (
-                <GroupTaskCard key={item.groupRoutine.id} data={item} onToggle={handleGroupToggle} />
-              ))}
+              <AnimatePresence initial={false}>
+                {renderRows.map((row) => {
+                  if (row.kind === "all-done") {
+                    return (
+                      <motion.div
+                        key="all-done"
+                        layout
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-[#C8C5D2]"
+                      >
+                        <PartyPopper className="h-4 w-4 text-[#FACC15]" />
+                        Alles für heute geschafft.
+                      </motion.div>
+                    );
+                  }
+                  if (row.kind === "done-divider") {
+                    return (
+                      <motion.div
+                        key="done-divider"
+                        layout
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex items-center gap-2 pt-1 pb-0.5"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#5F5B68]">Erledigt</span>
+                        <span className="text-[11px] text-[#5F5B68] tabular-nums">· {doneHeuteItems.length} erledigt</span>
+                        <div className="h-px flex-1 bg-[#292936]" />
+                      </motion.div>
+                    );
+                  }
+                  const { item } = row;
+                  return (
+                    <motion.div key={item.key} layout transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
+                      {item.kind === "personal" ? (
+                        <TaskCard data={item.data} onToggle={handleToggle} />
+                      ) : (
+                        <GroupTaskCard data={item.data} onToggle={handleGroupToggle} />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </Card>
