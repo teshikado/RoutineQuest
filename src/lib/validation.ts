@@ -280,3 +280,21 @@ export const dayReviewSchema = z.object({
   mood: z.enum(["GREAT", "GOOD", "OKAY", "HARD", "BAD"]).optional().nullable(),
   note: z.string().trim().max(1000).optional().nullable(),
 });
+
+// ---------- Held (hero) ----------
+
+export const heroCharacterSchema = z.object({
+  heroName: z.string().trim().max(24).optional().nullable(),
+  skinTone: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  hairStyle: z.enum(["short", "long", "mohawk", "bald", "curly"]),
+  hairColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  eyeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+});
+
+export const heroPetSelectSchema = z.object({
+  species: z.enum(["WOLF", "SNAKE", "LION", "TIGER", "BEAR", "EAGLE", "PANTHER"]),
+});
+
+export const heroItemActionSchema = z.object({
+  itemId: z.string().min(1),
+});

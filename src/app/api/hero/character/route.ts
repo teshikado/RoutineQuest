@@ -1,0 +1,25 @@
+import { NextResponse } from "next/server";
+import { requireUserId, isErrorResponse } from "@/lib/api-auth";
+import { heroCharacterSchema } from "@/lib/validation";
+import { completeCharacterSetup } from "@/lib/hero-service";
+
+export async function POST(req: Request) {
+  const userId = await requireUserId();
+  if (isErrorResponse(userId)) return userId;
+
+  const body = await req.json().catch(() => null);
+  const parsed = heroCharacterSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Ungültige Eingabe." }, { status: 400 });
+  }
+
+  const profile = await completeCharacterSetup(userId, {
+    heroName: parsed.data.heroName?.trim() || null,
+    skinTone: parsed.data.skinTone,
+    hairStyle: parsed.data.hairStyle,
+    hairColor: parsed.data.hairColor,
+    eyeColor: parsed.data.eyeColor,
+  });
+
+  return NextResponse.json({ profile });
+}

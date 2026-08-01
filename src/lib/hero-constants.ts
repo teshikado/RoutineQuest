@@ -1,0 +1,194 @@
+import type { EquipmentSlot, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
+
+/** Central, tweakable balance knobs for the whole Held (hero) system -- kept in one file so
+ * probabilities/ranges/bonuses can be rebalanced without touching the generation logic. */
+
+export const RARITY_META: Record<
+  ItemRarity,
+  { label: string; color: string; glow: string; strengthRange: [number, number] }
+> = {
+  COMMON: { label: "Gewöhnlich", color: "#9CA3AF", glow: "0 2px 10px rgba(156,163,175,0.25)", strengthRange: [5, 15] },
+  RARE: { label: "Selten", color: "#38BDF8", glow: "0 4px 18px rgba(56,189,248,0.35)", strengthRange: [16, 30] },
+  EPIC: { label: "Episch", color: "#A855F7", glow: "0 6px 24px rgba(168,85,247,0.45)", strengthRange: [31, 55] },
+  LEGENDARY: { label: "Legendär", color: "#FACC15", glow: "0 8px 30px rgba(250,204,21,0.5)", strengthRange: [56, 90] },
+};
+
+export const RARITY_ORDER: ItemRarity[] = ["COMMON", "RARE", "EPIC", "LEGENDARY"];
+
+/** Normal per-level roll. Must sum to 100. */
+export const RARITY_WEIGHTS_NORMAL: Record<ItemRarity, number> = {
+  COMMON: 40,
+  RARE: 30,
+  EPIC: 20,
+  LEGENDARY: 10,
+};
+
+/** Every 10th level (10, 20, 30, ...) uses this instead -- guarantees epic or legendary. */
+export const RARITY_WEIGHTS_MILESTONE: Partial<Record<ItemRarity, number>> = {
+  EPIC: 50,
+  LEGENDARY: 50,
+};
+
+export const MILESTONE_LEVEL_INTERVAL = 10;
+
+/** Small per-level strength bonus added on top of the rarity's random base, so gear from
+ * higher levels trends stronger without making rarity meaningless. Capped so a high level
+ * can't make a common item outclass a legendary one from a similar level. */
+export const LEVEL_STRENGTH_BONUS_CAP = 25;
+export function levelStrengthBonus(level: number): number {
+  return Math.min(LEVEL_STRENGTH_BONUS_CAP, Math.floor(level / 2));
+}
+
+export const EQUIPMENT_SLOT_META: Record<EquipmentSlot, { label: string; icon: string }> = {
+  HELMET: { label: "Helm", icon: "HardHat" },
+  CHEST: { label: "Oberteil", icon: "Shirt" },
+  PANTS: { label: "Hose", icon: "Rows3" },
+  SHOES: { label: "Schuhe", icon: "Footprints" },
+  WEAPON: { label: "Waffe", icon: "Swords" },
+};
+
+export const EQUIPMENT_SLOT_ORDER: EquipmentSlot[] = ["HELMET", "CHEST", "PANTS", "SHOES", "WEAPON"];
+
+/** Equal 20% odds per slot for a normal level-up drop; if WEAPON is rolled, a weapon type
+ * is then rolled uniformly among the five types below. */
+export const SLOT_WEIGHTS: Record<EquipmentSlot, number> = {
+  HELMET: 20,
+  CHEST: 20,
+  PANTS: 20,
+  SHOES: 20,
+  WEAPON: 20,
+};
+
+export const WEAPON_TYPE_META: Record<
+  WeaponType,
+  { label: string; description: string; attackShare: number; speedShare: number; critBonus: number }
+> = {
+  KATANA: { label: "Katana", description: "Gute Angriffskraft, gute Geschwindigkeit, leicht erhöhte kritische Trefferchance.", attackShare: 0.6, speedShare: 0.3, critBonus: 4 },
+  GREATSWORD: { label: "Großschwert", description: "Sehr hohe Angriffskraft, langsamere Geschwindigkeit, hoher Stärke-Wert.", attackShare: 0.85, speedShare: 0.1, critBonus: 0 },
+  DAGGER: { label: "Messer", description: "Geringere Angriffskraft, sehr hohe Geschwindigkeit, höhere kritische Trefferchance.", attackShare: 0.4, speedShare: 0.55, critBonus: 8 },
+  SWORD: { label: "Schwert", description: "Ausgeglichene Werte für alle Situationen.", attackShare: 0.55, speedShare: 0.35, critBonus: 2 },
+  SPEAR: { label: "Speer", description: "Gute Angriffskraft, etwas Verteidigung, ausgeglichene Geschwindigkeit.", attackShare: 0.6, speedShare: 0.25, critBonus: 1 },
+};
+
+export const WEAPON_TYPE_ORDER: WeaponType[] = ["KATANA", "GREATSWORD", "DAGGER", "SWORD", "SPEAR"];
+
+/** How a slot's raw `strength` roll is distributed across the visible sub-stats. Values are
+ * shares of `strength` (not required to sum to 1 -- some slots deliberately spread stats
+ * generously so low-strength items still show meaningful numbers). Weapon uses the
+ * per-weapon-type shares above instead of a fixed profile. */
+export const SLOT_STAT_PROFILE: Record<Exclude<EquipmentSlot, "WEAPON">, { defense: number; health: number; attack: number; speed: number }> = {
+  HELMET: { defense: 0.55, health: 0.35, attack: 0.1, speed: 0 },
+  CHEST: { defense: 0.5, health: 0.35, attack: 0.15, speed: 0 },
+  PANTS: { defense: 0.4, health: 0.35, attack: 0.15, speed: 0.1 },
+  SHOES: { defense: 0.2, health: 0.1, attack: 0, speed: 0.7 },
+};
+
+export const PET_SPECIES_META: Record<
+  PetSpecies,
+  { label: string; description: string; specialization: string; statFocus: { strength?: number; speed?: number; crit?: number; defense?: number; health?: number; dodge?: number } }
+> = {
+  WOLF: { label: "Wolf", description: "Ein ausgeglichener Begleiter, treu und verlässlich.", specialization: "Stärke & Geschwindigkeit", statFocus: { strength: 0.55, speed: 0.45 } },
+  SNAKE: { label: "Schlange", description: "Schnell, lautlos und taktisch klug.", specialization: "Kritische Trefferchance & Geschwindigkeit", statFocus: { crit: 0.55, speed: 0.45 } },
+  LION: { label: "Löwe", description: "Ein mächtiger und widerstandsfähiger Begleiter.", specialization: "Stärke & Verteidigung", statFocus: { strength: 0.55, defense: 0.45 } },
+  TIGER: { label: "Tiger", description: "Ein offensiver Begleiter mit enormem Angriffsdrang.", specialization: "Angriff & Geschwindigkeit", statFocus: { strength: 0.6, speed: 0.4 } },
+  BEAR: { label: "Bär", description: "Ein robuster Beschützer mit viel Ausdauer.", specialization: "Leben & Verteidigung", statFocus: { health: 0.55, defense: 0.45 } },
+  EAGLE: { label: "Adler", description: "Schnell, aufmerksam und immer einen Schritt voraus.", specialization: "Geschwindigkeit & kritische Trefferchance", statFocus: { speed: 0.55, crit: 0.45 } },
+  PANTHER: { label: "Panther", description: "Leise, beweglich und kaum zu treffen.", specialization: "Geschwindigkeit & Ausweichen", statFocus: { speed: 0.55, dodge: 0.45 } },
+};
+
+export const PET_SPECIES_ORDER: PetSpecies[] = ["WOLF", "SNAKE", "LION", "TIGER", "BEAR", "EAGLE", "PANTHER"];
+
+/** Pet evolves purely from the user's level -- these are the four fixed stage thresholds
+ * (there is no 5th stage; level 30+ stays on stage 4 forever). */
+export function petStageForLevel(level: number): 1 | 2 | 3 | 4 {
+  if (level >= 30) return 4;
+  if (level >= 20) return 3;
+  if (level >= 10) return 2;
+  return 1;
+}
+
+export const PET_STAGE_META: Record<1 | 2 | 3 | 4, { label: string; totalBonus: number; levelRequirement: number }> = {
+  1: { label: "Stufe 1", totalBonus: 5, levelRequirement: 1 },
+  2: { label: "Stufe 2", totalBonus: 15, levelRequirement: 10 },
+  3: { label: "Stufe 3", totalBonus: 30, levelRequirement: 20 },
+  4: { label: "Stufe 4", totalBonus: 50, levelRequirement: 30 },
+};
+
+// ---------- Meat / feeding economy ----------
+
+export const MEAT_PER_TASK = 10;
+export const MEAT_MAX_BALANCE = 99_999;
+export const MEAT_FEED_AMOUNT = 10;
+export const MEAT_DAILY_GOAL = 30;
+export const MEAT_VERY_FULL_THRESHOLD = 50;
+
+// ---------- Item naming ----------
+// Original names, organized by category (armor slot or weapon type) and rarity. Not lifted
+// from any existing game -- see hero-service.ts for how one is picked and combined with a
+// rolled numeric strength.
+
+const ARMOR_NAMES: Record<Exclude<EquipmentSlot, "WEAPON">, Record<ItemRarity, string[]>> = {
+  HELMET: {
+    COMMON: ["Einfacher Eisenhelm", "Lederkappe", "Abgewetzter Reisehelm"],
+    RARE: ["Helm des Nachtwächters", "Sturmhelm der Wanderer", "Visier des stillen Pfades"],
+    EPIC: ["Krone der Leerenwache", "Helm des violetten Sturms", "Maske des Schattenrichters"],
+    LEGENDARY: ["Helm des unsterblichen Herrschers", "Krone der schwarzen Sonne", "Diadem des Sternenwächters"],
+  },
+  CHEST: {
+    COMMON: ["Lederoberteil", "Einfaches Unterhemd", "Grobe Wanderjacke"],
+    RARE: ["Verstärkte Schattenrüstung", "Panzer des Nachtläufers", "Weste der Sturmreiter"],
+    EPIC: ["Rüstung des violetten Ritters", "Panzer der Leerenklinge", "Brustharnisch des Nachtkönigs"],
+    LEGENDARY: ["Rüstung der schwarzen Sonne", "Panzer des Weltenendes", "Harnisch des ewigen Herrschers"],
+  },
+  PANTS: {
+    COMMON: ["Reisende Hose", "Einfache Stoffhose", "Grobe Feldhose"],
+    RARE: ["Mondläufer-Hose", "Beinschutz der Nachtwache", "Hose der Sturmläufer"],
+    EPIC: ["Beinschutz des Schattenkönigs", "Hose der Leerenwanderer", "Beinpanzer des violetten Sturms"],
+    LEGENDARY: ["Beinschutz des Weltenbrechers", "Hose der schwarzen Sonne", "Beinpanzer des Sternenherrschers"],
+  },
+  SHOES: {
+    COMMON: ["Abgenutzte Stiefel", "Einfache Sandalen", "Grobe Wanderschuhe"],
+    RARE: ["Stiefel der Geschwindigkeit", "Schuhe des Nachtläufers", "Treter der Sturmboten"],
+    EPIC: ["Stiefel des Dimensionsläufers", "Schuhe der Leerenwache", "Treter des violetten Sturms"],
+    LEGENDARY: ["Stiefel der Sternenreise", "Schuhe des Weltenwanderers", "Treter der ewigen Nacht"],
+  },
+};
+
+const WEAPON_NAMES: Record<WeaponType, Record<ItemRarity, string[]>> = {
+  KATANA: {
+    COMMON: ["Einfaches Katana", "Übungsklinge", "Rostiges Katana"],
+    RARE: ["Blaues Sturmkatana", "Katana der Nachtwache", "Mondklinge"],
+    EPIC: ["Katana der ewigen Nacht", "Klinge des violetten Sturms", "Sturmreißer"],
+    LEGENDARY: ["Katana des lila Drachen", "Klinge der schwarzen Sonne", "Sternenschneide"],
+  },
+  GREATSWORD: {
+    COMMON: ["Einfaches Großschwert", "Schweres Übungsschwert", "Grobe Kriegsklinge"],
+    RARE: ["Großschwert der Sturmreiter", "Klinge des Nachtwächters", "Zweihänder der Wanderer"],
+    EPIC: ["Großschwert des Schattenkönigs", "Klinge der Leerenwache", "Zerteiler des violetten Sturms"],
+    LEGENDARY: ["Großschwert des Weltenbrechers", "Klinge der schwarzen Sonne", "Zerteiler der ewigen Nacht"],
+  },
+  DAGGER: {
+    COMMON: ["Einfaches Messer", "Kurzes Klingenmesser", "Abgenutztes Wurfmesser"],
+    RARE: ["Messer des Nachtläufers", "Schattendolch", "Klinge der stillen Jagd"],
+    EPIC: ["Dolch der Leerenwache", "Messer des violetten Sturms", "Schattenreißer"],
+    LEGENDARY: ["Dolch der schwarzen Sonne", "Messer des Sternenjägers", "Reißer der ewigen Nacht"],
+  },
+  SWORD: {
+    COMMON: ["Einfaches Schwert", "Übungsschwert", "Grobe Klinge"],
+    RARE: ["Schwert der Sturmwache", "Klinge des Nachtläufers", "Mondschwert"],
+    EPIC: ["Klinge der ewigen Nacht", "Schwert des violetten Ritters", "Sturmklinge"],
+    LEGENDARY: ["Schwert des unsterblichen Herrschers", "Klinge der schwarzen Sonne", "Sternenschwert"],
+  },
+  SPEAR: {
+    COMMON: ["Einfacher Speer", "Grober Jagdspeer", "Abgenutzte Lanze"],
+    RARE: ["Speer der Sturmreiter", "Lanze des Nachtwächters", "Wolkenspeer"],
+    EPIC: ["Speer des Schattenkönigs", "Lanze der Leerenwache", "Speer des violetten Sturms"],
+    LEGENDARY: ["Speer des Weltenbrechers", "Lanze der schwarzen Sonne", "Speer der ewigen Nacht"],
+  },
+};
+
+export function nameOptionsFor(slot: EquipmentSlot, weaponType: WeaponType | null, rarity: ItemRarity): string[] {
+  if (slot === "WEAPON" && weaponType) return WEAPON_NAMES[weaponType][rarity];
+  if (slot !== "WEAPON") return ARMOR_NAMES[slot][rarity];
+  return WEAPON_NAMES.SWORD[rarity];
+}

@@ -51,8 +51,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyRoutinesIllustration, EmptyGroupsIllustration } from "@/components/ui/illustrations";
 import { TaskCard, type TaskCardData } from "@/components/dashboard/task-card";
 import { GroupTaskCard, type GroupTaskCardData } from "@/components/dashboard/group-task-card";
+import { HeroCard, type DashboardHeroSummary } from "@/components/dashboard/hero-card";
 import { LevelUpModal } from "@/components/dashboard/level-up-modal";
 import { useToast } from "@/components/toast";
+import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { getLevelProgress, getRankForLevel } from "@/lib/xp";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 import { dateKey, todayDateOnly, formatLongDateDe, nowHHmmInTimeZone, isDayPlanEntryStillAhead } from "@/lib/dates";
@@ -189,6 +191,7 @@ export function DashboardClient({
     todayPlanEntries: DashboardPlanEntry[];
     manualOrder: ManualOrderEntry[];
     groups: { id: string; name: string; icon: string; color: string; memberCount: number }[];
+    heroSummary: DashboardHeroSummary;
   };
 }) {
   const router = useRouter();
@@ -911,6 +914,10 @@ export function DashboardClient({
         </Card>
       </Reveal>
 
+      <Reveal delay={0.1}>
+        <HeroCard summary={data.heroSummary} />
+      </Reveal>
+
       <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4" stagger={0.06}>
         <Card>
           <div className="flex items-center justify-between mb-3">
@@ -1002,22 +1009,6 @@ export function DashboardClient({
   );
 }
 
-/** True once the OS/browser reports a preference for reduced motion, kept live via the
- * media query's own change event (covers a user flipping the OS setting without reloading).
- * Reordering itself must keep working either way -- only the strength of the animation
- * changes (see `reducedMotion` usage in OrderableRow below). */
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return reduced;
-}
 
 /** One draggable row in the "Reihenfolge ändern" edit mode -- a read-only preview of the
  * open item (icon/title/time) plus a drag handle and Nach-oben/Nach-unten buttons. Deliberately

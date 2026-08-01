@@ -163,6 +163,12 @@ model User {
   dayPlanTemplates   DayPlanTemplate[]
   dayReviews         DayReview[]
   dashboardItemOrders DashboardItemOrder[]
+  heroProfile        HeroProfile?
+  equipmentItems     EquipmentItem[]
+  heroRewardClaims   HeroRewardClaim[]
+  pet                Pet?
+  petFeedingLogs     PetFeedingLog[]
+  meatTransactions   MeatTransaction[]
 
   @@index([email])
   @@index([username])
@@ -584,4 +590,168 @@ model DashboardItemOrder {
 
   @@unique([userId, itemType, itemId])
   @@index([userId])
+}
+
+// ---------- Held (hero RPG system) ----------
+// Reuses the existing User.totalXp / getLevelProgress() level system entirely -- there is
+// no separate hero level anywhere. "legacyMigrationCompletedAt" doubles as "initial hero
+// setup (appearance + pet) completed at" for every user, new or pre-existing -- the first
+// time a user finishes character creation, ensureRewardsUpToLevel has already backfilled
+// every level 1..currentLevel they were missing a reward for, whether that's just level 1
+// (brand-new signup) or many levels (a pre-update account) -- so there is deliberately no
+// separate migration code path, just one idempotent "make sure every level has a claim" step.
+
+enum EquipmentSlot {
+  HELMET
+  CHEST
+  PANTS
+  SHOES
+  WEAPON
+}
+
+enum ItemRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum WeaponType {
+  KATANA
+  GREATSWORD
+  DAGGER
+  SWORD
+  SPEAR
+}
+
+enum PetSpecies {
+  WOLF
+  SNAKE
+  LION
+  TIGER
+  BEAR
+  EAGLE
+  PANTHER
+}
+
+enum MeatTransactionType {
+  TASK_REWARD
+  FEEDING
+  UNDO_ADJUSTMENT
+  LEGACY_MIGRATION
+}
+
+model HeroProfile {
+  id                         String    @id @default(cuid())
+  userId                     String    @unique
+  heroName                   String?
+  skinTone                   String    @default("#E8B48C")
+  hairStyle                  String    @default("short")
+  hairColor                  String    @default("#3A2A1E")
+  eyeColor                   String    @default("#4A3728")
+  meatBalance                Int       @default(0)
+  legacyMigrationCompletedAt DateTime?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/** One rolled item = one row, generated entirely server-side (see hero-service.ts). Only
+ * becomes visible/equippable in the inventory once its HeroRewardClaim.openedAt is set. */
+model EquipmentItem {
+  id             String        @id @default(cuid())
+  userId         String
+  rewardLevel    Int
+  slot           EquipmentSlot
+  rarity         ItemRarity
+  weaponType     WeaponType?
+  name           String
+  strength       Int
+  attack         Int           @default(0)
+  defense        Int           @default(0)
+  health         Int           @default(0)
+  speed          Int           @default(0)
+  criticalChance Int           @default(0)
+  isEquipped     Boolean       @default(false)
+  isFavorite     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardClaim HeroRewardClaim?
+
+  @@index([userId])
+  @@index([userId, isEquipped])
+  @@index([userId, slot])
+}
+
+/** Exactly one claim per (userId, level) -- the single source of truth for "has this level's
+ * reward already been generated", used for both normal level-ups and the legacy backfill. */
+model HeroRewardClaim {
+  id          String    @id @default(cuid())
+  userId      String
+  level       Int
+  itemId      String    @unique
+  isMilestone Boolean   @default(false)
+  openedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item EquipmentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level])
+  @@index([userId, openedAt])
+}
+
+model Pet {
+  id            String     @id @default(cuid())
+  userId        String     @unique
+  species       PetSpecies
+  // The current evolution stage is always derived from the user's level (see
+  // petStageForLevel in hero-service.ts) -- `notifiedStage` only tracks the highest stage
+  // the evolution animation has already been shown for, so it fires exactly once per
+  // threshold even across reloads/devices.
+  notifiedStage Int        @default(1)
+  selectedAt    DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedingLogs PetFeedingLog[]
+
+  @@index([userId])
+}
+
+model PetFeedingLog {
+  id        String   @id @default(cuid())
+  userId    String
+  petId     String
+  localDate DateTime @db.Date
+  amount    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet  Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([userId, localDate])
+}
+
+/** Append-only meat ledger. `meatBalance` on HeroProfile is a maintained cache for fast
+ * reads; this table is the auditable source of truth and the idempotency guard -- the
+ * unique constraint below is what makes awarding/reversing meat for a given completion
+ * event safe against double-clicks, retries, and reload races. */
+model MeatTransaction {
+  id         String              @id @default(cuid())
+  userId     String
+  amount     Int
+  type       MeatTransactionType
+  sourceType String
+  sourceId   String
+  createdAt  DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, sourceType, sourceId])
+  @@index([userId, createdAt])
 }

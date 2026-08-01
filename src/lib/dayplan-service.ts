@@ -6,6 +6,7 @@ import { recomputeTotalXp } from "./completion-service";
 import { toggleCompletion, CompletionError } from "./completion-service";
 import { toggleGroupRoutineCompletion, GroupRoutineCompletionError } from "./group-routine-completion-service";
 import { DAYPLAN_ENTRY_XP, MAX_DAYPLAN_RANGE_DAYS } from "./dayplan-constants";
+import { awardMeatForCompletion, reverseMeatForCompletion } from "./hero-service";
 
 export type DayPlanErrorCode =
   | "NOT_FOUND"
@@ -1158,13 +1159,14 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
   if (!completing) {
     if (!entry.linkedRoutineId && !entry.linkedGroupRoutineId) {
       const key = { userId_reason_refDate_refId: { userId, reason: "DAYPLAN_ENTRY_COMPLETE", refDate: entry.date, refId: entry.id } };
-      const existingXp = await prisma.xpTransaction.findUnique({ where: key });
-      if (existingXp) {
-        await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
+        const existingXp = await tx.xpTransaction.findUnique({ where: key });
+        if (existingXp) {
           await tx.xpTransaction.delete({ where: { id: existingXp.id } });
           await recomputeTotalXp(tx, userId);
-        });
-      }
+        }
+        await reverseMeatForCompletion(tx, userId, "DAYPLAN_ENTRY", entry.id);
+      });
     }
     const updated = await prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status: "PLANNED", completedAt: null } });
     return { entry: updated, xpDelta: 0, linkedAction: null, leveledUp: false, level: null, rankedUp: false };
@@ -1214,19 +1216,20 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
     }
   } else {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (user.xpForDayPlanning) {
-      const key = { userId_reason_refDate_refId: { userId, reason: "DAYPLAN_ENTRY_COMPLETE", refDate: entry.date, refId: entry.id } };
-      const already = await prisma.xpTransaction.findUnique({ where: key });
-      if (!already) {
-        await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
+      if (user.xpForDayPlanning) {
+        const key = { userId_reason_refDate_refId: { userId, reason: "DAYPLAN_ENTRY_COMPLETE", refDate: entry.date, refId: entry.id } };
+        const already = await tx.xpTransaction.findUnique({ where: key });
+        if (!already) {
           await tx.xpTransaction.create({
             data: { userId, amount: DAYPLAN_ENTRY_XP, reason: "DAYPLAN_ENTRY_COMPLETE", refDate: entry.date, refId: entry.id },
           });
           await recomputeTotalXp(tx, userId);
-        });
-        xpDelta = DAYPLAN_ENTRY_XP;
+          xpDelta = DAYPLAN_ENTRY_XP;
+        }
       }
-    }
+      await awardMeatForCompletion(tx, userId, "DAYPLAN_ENTRY", entry.id);
+    });
   }
 
   const updated = await prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status: "DONE", completedAt: new Date() } });
