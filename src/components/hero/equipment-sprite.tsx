@@ -7,6 +7,7 @@ export function EquipmentSprite({
   weaponType,
   rarity,
   armorSetKey,
+  legendaryStyle,
   className,
   title,
 }: {
@@ -14,13 +15,14 @@ export function EquipmentSprite({
   weaponType: WeaponType | null;
   rarity: ItemRarity;
   armorSetKey?: string | null;
+  legendaryStyle?: string | null;
   className?: string;
   title?: string;
 }) {
   return (
     <div className={`relative ${className ?? ""}`}>
       <Image
-        src={equipmentIconSrc(slot, weaponType, rarity, armorSetKey)}
+        src={equipmentIconSrc(slot, weaponType, rarity, armorSetKey, legendaryStyle)}
         alt={title ?? ""}
         fill
         sizes="160px"

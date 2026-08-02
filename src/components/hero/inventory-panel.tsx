@@ -9,12 +9,15 @@ import {
   ARMOR_SET_META,
   EQUIPMENT_SLOT_META,
   EQUIPMENT_SLOT_ORDER,
+  LEGENDARY_STYLE_KEY_ORDER,
+  LEGENDARY_STYLE_META,
   RARITY_META,
   RARITY_ORDER,
   WEAPON_TYPE_META,
   type ArmorSetKey,
+  type LegendaryStyleKey,
 } from "@/lib/hero-constants";
-import { armorSetIconSrc } from "@/lib/hero-assets";
+import { armorSetIconSrc, equipmentIconSrc } from "@/lib/hero-assets";
 import { EquipmentSprite } from "./equipment-sprite";
 import { CharacterSprite, type EquippedPiece } from "./character-sprite";
 import type { HeroEquipmentItem } from "./hero-types";
@@ -82,6 +85,131 @@ function SetPreviewModal({ setKey, ownedSlots, onClose }: { setKey: ArmorSetKey;
               <Image src={armorSetIconSrc(slot, setKey)} alt={EQUIPMENT_SLOT_META[slot].label} fill sizes="80px" className={`object-contain p-1 ${ownedSlots.has(slot) ? "" : "opacity-30"}`} style={{ imageRendering: "pixelated" }} />
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Live preview of all 3 legendary styles on this specific item, shown alongside the full
+ * character (with everything else the player currently has equipped) so switching style is
+ * judged in context, not in isolation. Selecting a swatch only updates the local preview --
+ * `changeLegendaryStyle` (item id/rarity/strength/stats/equipped/favorite untouched) only
+ * fires once the player confirms with "Anwenden". */
+function LegendaryStyleModal({
+  item,
+  equippedItems,
+  onClose,
+  onChangeStyle,
+}: {
+  item: HeroEquipmentItem;
+  equippedItems: HeroEquipmentItem[];
+  onClose: () => void;
+  onChangeStyle: (itemId: string, style: LegendaryStyleKey) => Promise<void>;
+}) {
+  const reducedMotion = usePrefersReducedMotion();
+  const currentStyle = (item.legendaryStyle as LegendaryStyleKey | null) ?? LEGENDARY_STYLE_KEY_ORDER[0];
+  const [previewStyle, setPreviewStyle] = useState<LegendaryStyleKey>(currentStyle);
+  const [saving, setSaving] = useState(false);
+
+  const equipped: Partial<Record<EquipmentSlot, EquippedPiece>> = {};
+  for (const eq of equippedItems) {
+    equipped[eq.slot] = {
+      slot: eq.slot,
+      rarity: eq.rarity,
+      weaponType: eq.weaponType,
+      armorSetKey: eq.armorSetKey,
+      legendaryStyle: eq.id === item.id ? previewStyle : eq.legendaryStyle,
+    };
+  }
+  // The item itself might not currently be equipped -- still show it on the relevant slot so
+  // the preview is meaningful even before the player equips it.
+  if (!equipped[item.slot]) {
+    equipped[item.slot] = { slot: item.slot, rarity: item.rarity, weaponType: item.weaponType, armorSetKey: item.armorSetKey, legendaryStyle: previewStyle };
+  }
+
+  async function handleApply() {
+    setSaving(true);
+    try {
+      await onChangeStyle(item.id, previewStyle);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050507]/90 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-xl rounded-2xl border p-6"
+        style={{ borderColor: RARITY_META.LEGENDARY.color, background: "#111118", boxShadow: RARITY_META.LEGENDARY.glow }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider" style={{ color: RARITY_META.LEGENDARY.color }}>
+              Legendär
+            </div>
+            <h3 className="text-lg font-extrabold text-[#F8F7FC]">Legendären Stil ändern</h3>
+            <p className="text-xs text-[#8D8998] mt-1">
+              {item.name} · {EQUIPMENT_SLOT_META[item.slot].label} · Stärke {item.strength} bleibt unverändert
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Schließen" className="text-[#8D8998] hover:text-[#F8F7FC]">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4">
+          <div className="flex sm:flex-col gap-3 justify-center">
+            <div className="flex flex-col items-center">
+              <CharacterSprite appearance={{ characterType: "MALE", ...PREVIEW_APPEARANCE }} equipped={equipped} reducedMotion={reducedMotion} className="w-28 h-36" />
+              <span className="text-[10px] text-[#8D8998]">Männlich</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <CharacterSprite appearance={{ characterType: "FEMALE", ...PREVIEW_APPEARANCE }} equipped={equipped} reducedMotion={reducedMotion} className="w-28 h-36" />
+              <span className="text-[10px] text-[#8D8998]">Weiblich</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {LEGENDARY_STYLE_KEY_ORDER.map((styleKey) => {
+              const meta = LEGENDARY_STYLE_META[styleKey];
+              const active = previewStyle === styleKey;
+              return (
+                <button
+                  key={styleKey}
+                  type="button"
+                  onClick={() => setPreviewStyle(styleKey)}
+                  aria-pressed={active}
+                  className={`rounded-xl border-2 p-2 text-left transition-colors ${active ? "border-[#FACC15] bg-[#FACC15]/10" : "border-[#292936] hover:border-[#3D2A5C]"}`}
+                >
+                  <div className="relative aspect-square mb-1.5 rounded-lg bg-[#171720]">
+                    <Image
+                      src={equipmentIconSrc(item.slot, null, "LEGENDARY", undefined, styleKey)}
+                      alt={meta.label}
+                      fill
+                      sizes="100px"
+                      className="object-contain p-1.5"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                  </div>
+                  <div className="text-[11px] font-bold text-[#F8F7FC]">{meta.label}</div>
+                  <div className="text-[9px] text-[#8D8998] leading-tight mt-0.5">{meta.description}</div>
+                  {currentStyle === styleKey && <div className="text-[9px] font-bold text-[#34D399] mt-1">Aktuell</div>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
+            Abbrechen
+          </Button>
+          <Button onClick={handleApply} loading={saving} disabled={previewStyle === currentStyle}>
+            Anwenden
+          </Button>
         </div>
       </div>
     </div>
@@ -204,11 +332,23 @@ function ItemCard({
           {item.isEquipped && <span className="text-[10px] font-bold text-[#34D399]">Angelegt</span>}
         </div>
       </div>
-      <EquipmentSprite slot={item.slot} weaponType={item.weaponType} rarity={item.rarity} armorSetKey={item.armorSetKey} className="w-full h-16 mb-2" title={item.name} />
+      <EquipmentSprite
+        slot={item.slot}
+        weaponType={item.weaponType}
+        rarity={item.rarity}
+        armorSetKey={item.armorSetKey}
+        legendaryStyle={item.legendaryStyle}
+        className="w-full h-16 mb-2"
+        title={item.name}
+      />
       <div className="text-xs font-semibold text-[#F8F7FC] truncate">{item.name}</div>
       <div className="text-[11px] text-[#8D8998] truncate">
         {meta.label}
-        {item.armorSetKey && ARMOR_SET_META[item.armorSetKey as ArmorSetKey] ? ` · ${ARMOR_SET_META[item.armorSetKey as ArmorSetKey].label}` : ""}
+        {item.rarity === "LEGENDARY" && item.legendaryStyle && LEGENDARY_STYLE_META[item.legendaryStyle as LegendaryStyleKey]
+          ? ` · ${LEGENDARY_STYLE_META[item.legendaryStyle as LegendaryStyleKey].label}`
+          : item.armorSetKey && ARMOR_SET_META[item.armorSetKey as ArmorSetKey]
+            ? ` · ${ARMOR_SET_META[item.armorSetKey as ArmorSetKey].label}`
+            : ""}
         {" · "}
         {EQUIPMENT_SLOT_META[item.slot].label}
         {item.weaponType ? ` · ${WEAPON_TYPE_META[item.weaponType].label}` : ""}
@@ -224,12 +364,14 @@ export function InventoryPanel({
   onUnequip,
   onFavorite,
   onEquipSet,
+  onChangeLegendaryStyle,
 }: {
   items: HeroEquipmentItem[];
   onEquip: (itemId: string) => Promise<void>;
   onUnequip: (itemId: string) => Promise<void>;
   onFavorite: (itemId: string) => Promise<void>;
   onEquipSet: (setKey: string) => Promise<void>;
+  onChangeLegendaryStyle: (itemId: string, style: LegendaryStyleKey) => Promise<void>;
 }) {
   const [slotFilter, setSlotFilter] = useState<SlotFilter>("ALL");
   const [rarityFilter, setRarityFilter] = useState<ItemRarity | "ALL">("ALL");
@@ -240,6 +382,8 @@ export function InventoryPanel({
   const [busy, setBusy] = useState(false);
   const [equippingSet, setEquippingSet] = useState(false);
   const [previewSetKey, setPreviewSetKey] = useState<ArmorSetKey | null>(null);
+  const [legendaryStyleItemId, setLegendaryStyleItemId] = useState<string | null>(null);
+  const equippedItems = useMemo(() => items.filter((i) => i.isEquipped), [items]);
 
   const ownedSetSlots = useMemo(() => {
     const map = new Map<ArmorSetKey, Set<EquipmentSlot>>();
@@ -428,6 +572,11 @@ export function InventoryPanel({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {selected.rarity === "LEGENDARY" && selected.slot !== "WEAPON" && (
+                <Button variant="secondary" size="sm" onClick={() => setLegendaryStyleItemId(selected.id)}>
+                  Legendären Stil ändern
+                </Button>
+              )}
               <Button variant="secondary" size="sm" onClick={() => onFavorite(selected.id)}>
                 <Star className={`h-4 w-4 ${selected.isFavorite ? "fill-[#FACC15] text-[#FACC15]" : ""}`} />
                 Favorit
@@ -447,6 +596,19 @@ export function InventoryPanel({
           onClose={() => setPreviewSetKey(null)}
         />
       )}
+
+      {legendaryStyleItemId && (() => {
+        const legendaryItem = items.find((i) => i.id === legendaryStyleItemId);
+        if (!legendaryItem) return null;
+        return (
+          <LegendaryStyleModal
+            item={legendaryItem}
+            equippedItems={equippedItems}
+            onClose={() => setLegendaryStyleItemId(null)}
+            onChangeStyle={onChangeLegendaryStyle}
+          />
+        );
+      })()}
     </Card>
   );
 }

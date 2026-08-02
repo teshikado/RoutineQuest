@@ -682,6 +682,11 @@ model EquipmentItem {
   // A String (not an enum) to match the existing skinTone/hairColor/hairStyle convention for
   // cosmetic/asset-key fields on this model family.
   armorSetKey    String?
+  // Purely cosmetic reskin for LEGENDARY armor pieces only -- independent of armorSetKey, lets
+  // a player pick which of the legendary "styles" (see LEGENDARY_STYLE_META in
+  // hero-constants.ts) an item is *displayed* as, without changing its identity/name/stats.
+  // Null for weapons, non-legendary rarities, and any legendary item until backfilled/rolled.
+  legendaryStyle String?
   name           String
   strength       Int
   attack         Int           @default(0)

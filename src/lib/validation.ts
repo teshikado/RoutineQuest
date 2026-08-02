@@ -287,9 +287,14 @@ export const heroCharacterSchema = z.object({
   heroName: z.string().trim().max(24).optional().nullable(),
   characterType: z.enum(["MALE", "FEMALE"]),
   skinTone: z.enum(["very-light", "light", "medium", "dark", "very-dark"]),
-  hairColor: z.enum(["black", "brown", "blonde", "red", "gray", "purple"]),
+  hairColor: z.enum(["black", "darkbrown", "brown", "blonde", "red", "gray", "silver", "purple"]),
   hairStyle: z.enum(["kurz", "lang"]),
   bodyBuild: z.enum(["duenn", "normal", "muskuloes", "kraeftig", "stabil"]),
+});
+
+export const heroLegendaryStyleSchema = z.object({
+  itemId: z.string().min(1),
+  legendaryStyle: z.enum(["himmels-paladin", "schattenfuerst", "drachenkoenig"]),
 });
 
 export const heroPetSelectSchema = z.object({

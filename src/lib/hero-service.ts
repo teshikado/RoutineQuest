@@ -4,6 +4,7 @@ import { getLevelProgress } from "./xp";
 import { todayDateOnly } from "./dates";
 import {
   ARMOR_SET_KEYS_BY_RARITY,
+  LEGENDARY_STYLE_KEY_ORDER,
   LEVEL_STRENGTH_BONUS_CAP,
   MEAT_DAILY_GOAL,
   MEAT_FEED_AMOUNT,
@@ -19,10 +20,12 @@ import {
   WEAPON_TYPE_META,
   WEAPON_TYPE_ORDER,
   armorSetItemName,
+  deterministicLegendaryStyle,
   deterministicSetKeyForRarity,
   levelStrengthBonus,
   weaponNameOptions,
   petStageForLevel,
+  type LegendaryStyleKey,
 } from "./hero-constants";
 
 type TxClient = Prisma.TransactionClient;
@@ -41,6 +44,8 @@ export type HeroErrorCode =
   | "FEEDING_FAILED"
   | "LEGACY_MIGRATION_FAILED"
   | "ARMOR_SET_INCOMPLETE"
+  | "ITEM_NOT_LEGENDARY_ARMOR"
+  | "INVALID_LEGENDARY_STYLE"
   | "NOT_AUTHORIZED";
 
 export class HeroError extends Error {
@@ -68,6 +73,8 @@ export const HERO_ERROR_MESSAGES: Record<HeroErrorCode, string> = {
   FEEDING_FAILED: "Dein Haustier konnte nicht gefüttert werden.",
   LEGACY_MIGRATION_FAILED: "Die rückwirkenden Belohnungen konnten nicht vollständig erstellt werden.",
   ARMOR_SET_INCOMPLETE: "Du besitzt noch nicht alle vier Teile dieses Sets.",
+  ITEM_NOT_LEGENDARY_ARMOR: "Der legendäre Stil kann nur bei legendären Rüstungsteilen geändert werden.",
+  INVALID_LEGENDARY_STYLE: "Ungültiger legendärer Stil.",
   NOT_AUTHORIZED: "Nicht angemeldet.",
 };
 
@@ -127,6 +134,7 @@ async function generateRewardForLevel(tx: TxClient, userId: string, level: numbe
 
   let name: string;
   let armorSetKey: string | null = null;
+  let legendaryStyle: LegendaryStyleKey | null = null;
   if (slot === "WEAPON" && weaponType) {
     const names = weaponNameOptions(weaponType, rarity);
     name = names[Math.floor(Math.random() * names.length)];
@@ -134,10 +142,13 @@ async function generateRewardForLevel(tx: TxClient, userId: string, level: numbe
     const setKeys = ARMOR_SET_KEYS_BY_RARITY[rarity];
     armorSetKey = setKeys[Math.floor(Math.random() * setKeys.length)];
     name = armorSetItemName(slot as Exclude<EquipmentSlot, "WEAPON">, armorSetKey as Parameters<typeof armorSetItemName>[1]);
+    if (rarity === "LEGENDARY") {
+      legendaryStyle = LEGENDARY_STYLE_KEY_ORDER[Math.floor(Math.random() * LEGENDARY_STYLE_KEY_ORDER.length)];
+    }
   }
 
   const item = await tx.equipmentItem.create({
-    data: { userId, rewardLevel: level, slot, rarity, weaponType, armorSetKey, name, strength, attack, defense, health, speed, criticalChance },
+    data: { userId, rewardLevel: level, slot, rarity, weaponType, armorSetKey, legendaryStyle, name, strength, attack, defense, health, speed, criticalChance },
   });
   await tx.heroRewardClaim.create({ data: { userId, level, itemId: item.id, isMilestone } });
   return item;
@@ -226,12 +237,50 @@ async function backfillArmorSetKeys(userId: string) {
   );
 }
 
+/** Same idempotent-deterministic pattern as backfillArmorSetKeys, for the separate
+ * legendaryStyle reskin field -- only ever touches LEGENDARY armor pieces that don't have one
+ * yet, never re-rolls an existing value. */
+async function backfillLegendaryStyles(userId: string) {
+  const unset = await prisma.equipmentItem.findMany({
+    where: { userId, rarity: "LEGENDARY", legendaryStyle: null, slot: { not: "WEAPON" } },
+    select: { id: true },
+  });
+  if (unset.length === 0) return;
+  await prisma.$transaction(
+    unset.map((item) =>
+      prisma.equipmentItem.update({
+        where: { id: item.id },
+        data: { legendaryStyle: deterministicLegendaryStyle(item.id) },
+      })
+    )
+  );
+}
+
+/** Transactional, ownership-checked cosmetic reskin: swaps only `legendaryStyle` on a
+ * legendary armor piece. Rarity/strength/stats/rewardLevel/equipped/favorite/id/name are
+ * never touched -- see the item-detail "Legendären Stil ändern" UI. */
+export async function changeLegendaryStyle(userId: string, itemId: string, legendaryStyle: LegendaryStyleKey) {
+  if (!LEGENDARY_STYLE_KEY_ORDER.includes(legendaryStyle)) {
+    throw new HeroError(HERO_ERROR_MESSAGES.INVALID_LEGENDARY_STYLE, "INVALID_LEGENDARY_STYLE");
+  }
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.equipmentItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new HeroError(HERO_ERROR_MESSAGES.ITEM_NOT_FOUND, "ITEM_NOT_FOUND");
+    if (item.userId !== userId) throw new HeroError(HERO_ERROR_MESSAGES.ITEM_NOT_OWNED, "ITEM_NOT_OWNED");
+    if (item.rarity !== "LEGENDARY" || item.slot === "WEAPON") {
+      throw new HeroError(HERO_ERROR_MESSAGES.ITEM_NOT_LEGENDARY_ARMOR, "ITEM_NOT_LEGENDARY_ARMOR");
+    }
+    return tx.equipmentItem.update({ where: { id: itemId }, data: { legendaryStyle } });
+  });
+}
+
 export async function getHeroPageData(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const level = getLevelProgress(user.totalXp).level;
 
   await ensureRewardsUpToLevel(userId, level);
   await backfillArmorSetKeys(userId);
+  await backfillLegendaryStyles(userId);
 
   const [profile, items, claims, pet, todayFeedLogs] = await Promise.all([
     ensureHeroProfile(prisma, userId),

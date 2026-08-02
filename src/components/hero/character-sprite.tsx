@@ -22,7 +22,13 @@ export type CharacterAppearance = {
   hairStyle: HairStyleKey;
   bodyBuild?: BodyBuildKey;
 };
-export type EquippedPiece = { slot: EquipmentSlot; rarity: ItemRarity; weaponType: WeaponType | null; armorSetKey?: string | null };
+export type EquippedPiece = {
+  slot: EquipmentSlot;
+  rarity: ItemRarity;
+  weaponType: WeaponType | null;
+  armorSetKey?: string | null;
+  legendaryStyle?: string | null;
+};
 
 type Zone = { top: string; left: string; width: string; height: string };
 
@@ -131,7 +137,7 @@ export function CharacterSprite({
               style={{ top: zone.top, left: zone.left, width: zone.width, height: zone.height, filter: glow ? `drop-shadow(${glow})` : undefined }}
             >
               <Image
-                src={equipmentIconSrc(slot, item.weaponType, item.rarity, item.armorSetKey)}
+                src={equipmentIconSrc(slot, item.weaponType, item.rarity, item.armorSetKey, item.legendaryStyle)}
                 alt=""
                 fill
                 sizes="160px"

@@ -8,6 +8,7 @@ export type HeroItemFields = {
   rarity: ItemRarity;
   weaponType: WeaponType | null;
   armorSetKey: string | null;
+  legendaryStyle: string | null;
   name: string;
   strength: number;
   attack: number;

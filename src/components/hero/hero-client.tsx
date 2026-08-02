@@ -159,6 +159,17 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     }
   }
 
+  async function handleChangeLegendaryStyle(itemId: string, legendaryStyle: string) {
+    try {
+      await postJson("/api/hero/legendary-style", { itemId, legendaryStyle });
+      showToast("Legendärer Stil geändert.", "success");
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : GENERIC_ERROR, "error");
+      throw err;
+    }
+  }
+
   async function handleOpenReward(claimId: string): Promise<HeroRewardClaim> {
     try {
       const result = await postJson(`/api/hero/rewards/${claimId}/open`);
@@ -213,7 +224,7 @@ export function HeroClient({ data }: { data: HeroPageData }) {
   const equippedForSprite = Object.fromEntries(
     Object.entries(equippedBySlot).map(([slot, item]) => [
       slot,
-      { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType, armorSetKey: item!.armorSetKey },
+      { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType, armorSetKey: item!.armorSetKey, legendaryStyle: item!.legendaryStyle },
     ])
   );
 
@@ -336,7 +347,15 @@ export function HeroClient({ data }: { data: HeroPageData }) {
                   return (
                     <div key={slot} className="flex items-center gap-3 rounded-xl border border-[#292936] bg-[#171720] p-3">
                       {item ? (
-                        <EquipmentSprite slot={slot} weaponType={item.weaponType} rarity={item.rarity} armorSetKey={item.armorSetKey} className="w-14 h-14 shrink-0" title={item.name} />
+                        <EquipmentSprite
+                          slot={slot}
+                          weaponType={item.weaponType}
+                          rarity={item.rarity}
+                          armorSetKey={item.armorSetKey}
+                          legendaryStyle={item.legendaryStyle}
+                          className="w-14 h-14 shrink-0"
+                          title={item.name}
+                        />
                       ) : (
                         <div className="w-14 h-14 rounded-lg bg-[#111118] flex items-center justify-center text-[10px] text-[#5F5B68] shrink-0">Leer</div>
                       )}
@@ -370,7 +389,14 @@ export function HeroClient({ data }: { data: HeroPageData }) {
           )}
 
           {activeTab === "inventory" && (
-            <InventoryPanel items={openedItems} onEquip={handleEquip} onUnequip={handleUnequip} onFavorite={handleFavorite} onEquipSet={handleEquipSet} />
+            <InventoryPanel
+              items={openedItems}
+              onEquip={handleEquip}
+              onUnequip={handleUnequip}
+              onFavorite={handleFavorite}
+              onEquipSet={handleEquipSet}
+              onChangeLegendaryStyle={handleChangeLegendaryStyle}
+            />
           )}
 
           {activeTab === "pet" && (

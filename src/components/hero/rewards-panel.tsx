@@ -76,6 +76,7 @@ function RewardRevealModal({
             weaponType={claim.item.weaponType}
             rarity={claim.item.rarity}
             armorSetKey={claim.item.armorSetKey}
+            legendaryStyle={claim.item.legendaryStyle}
             className="w-32 h-28 mx-auto mb-3"
             title={claim.item.name}
           />

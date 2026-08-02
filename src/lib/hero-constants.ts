@@ -82,6 +82,46 @@ export const ARMOR_SET_META: Record<ArmorSetKey, { label: string; genitive: stri
 
 export const ARMOR_SET_KEY_ORDER: ArmorSetKey[] = Object.keys(ARMOR_SET_META) as ArmorSetKey[];
 
+// ---------- Legendary styles ----------
+// A purely cosmetic reskin layer for LEGENDARY armor pieces: independent of which of the 3
+// legendary sets an item actually rolled as (armorSetKey), a player can choose to *display* it
+// as any of these 3 styles instead. Deliberately only 3, not the 4 originally requested
+// (Samurai, Himmels-Paladin, Schattenfürst, Drachenkönig) -- there is no real Samurai-themed
+// armor art in this project (no East-Asian kabuto-style helm exists anywhere in the asset set)
+// and this project has no illustration/generation capability, only image manipulation, so a
+// 4th style cannot be produced without fabricating something. The 3 styles below reuse the
+// existing, already visually distinct legendary set art under themed names that reasonably
+// match 3 of the 4 requested concepts.
+export type LegendaryStyleKey = "himmels-paladin" | "schattenfuerst" | "drachenkoenig";
+
+export const LEGENDARY_STYLE_META: Record<LegendaryStyleKey, { label: string; description: string; setKey: ArmorSetKey }> = {
+  "himmels-paladin": {
+    label: "Himmels-Paladin",
+    description: "Edle geflügelte Rüstung in Weiß und Gold mit leuchtendem Blau -- heroisch und rein.",
+    setKey: "sky-warden",
+  },
+  "schattenfuerst": {
+    label: "Schattenfürst",
+    description: "Dunkle, mystische Rüstung in Schwarz und Violett mit kalten Kristallakzenten.",
+    setKey: "star-breaker",
+  },
+  "drachenkoenig": {
+    label: "Drachenkönig",
+    description: "Schwere, königliche Rüstung in Gold und Dunkelblau -- mächtig und herrschaftlich.",
+    setKey: "sun-king",
+  },
+};
+
+export const LEGENDARY_STYLE_KEY_ORDER: LegendaryStyleKey[] = Object.keys(LEGENDARY_STYLE_META) as LegendaryStyleKey[];
+
+/** Deterministic (not random-per-render) style assignment for legendary items that predate
+ * this system -- same item always maps to the same style, across reloads and devices. */
+export function deterministicLegendaryStyle(itemId: string): LegendaryStyleKey {
+  let hash = 0;
+  for (let i = 0; i < itemId.length; i++) hash = (hash * 31 + itemId.charCodeAt(i) + 7) >>> 0;
+  return LEGENDARY_STYLE_KEY_ORDER[hash % LEGENDARY_STYLE_KEY_ORDER.length];
+}
+
 export function armorSetItemName(slot: Exclude<EquipmentSlot, "WEAPON">, setKey: ArmorSetKey): string {
   return `${EQUIPMENT_SLOT_META[slot].label} ${ARMOR_SET_META[setKey].genitive}`;
 }

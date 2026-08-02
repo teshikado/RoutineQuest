@@ -1,4 +1,5 @@
 import type { EquipmentSlot, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
+import { LEGENDARY_STYLE_META, type LegendaryStyleKey } from "./hero-constants";
 
 /** Single source of truth for every hero-system image path -- nothing else in the codebase
  * should hard-code a `/hero/...` string. All assets were extracted from the five source
@@ -7,7 +8,7 @@ import type { EquipmentSlot, ItemRarity, PetSpecies, WeaponType } from "@prisma/
 
 export type HeroCharacterTypeLower = "male" | "female";
 export type SkinToneKey = "very-light" | "light" | "medium" | "dark" | "very-dark";
-export type HairColorKey = "black" | "brown" | "blonde" | "red" | "gray" | "purple";
+export type HairColorKey = "black" | "darkbrown" | "brown" | "blonde" | "red" | "gray" | "silver" | "purple";
 
 export const SKIN_TONE_OPTIONS: { key: SkinToneKey; label: string; swatch: string }[] = [
   { key: "very-light", label: "Sehr hell", swatch: "#F4D5B7" },
@@ -17,12 +18,17 @@ export const SKIN_TONE_OPTIONS: { key: SkinToneKey; label: string; swatch: strin
   { key: "very-dark", label: "Sehr dunkel", swatch: "#523624" },
 ];
 
+/** "darkbrown" and "silver" are real HSL-remapped recolors of "brown"/"gray" (own dark/mid/
+ * light/highlight shading preserved, not a flat tint) -- see the Abschlussbericht for the
+ * pixel-diff-based hair-mask technique used to build them without touching skin/clothing. */
 export const HAIR_COLOR_OPTIONS: { key: HairColorKey; label: string; swatch: string }[] = [
   { key: "black", label: "Schwarz", swatch: "#1E1A18" },
+  { key: "darkbrown", label: "Dunkelbraun", swatch: "#4A2E18" },
   { key: "brown", label: "Braun", swatch: "#88441D" },
   { key: "blonde", label: "Blond", swatch: "#D8B260" },
   { key: "red", label: "Rot", swatch: "#A33F21" },
   { key: "gray", label: "Grau", swatch: "#A3A3A8" },
+  { key: "silver", label: "Silber/Weiß", swatch: "#E7EBF0" },
   { key: "purple", label: "Lila", swatch: "#824EB2" },
 ];
 
@@ -95,11 +101,25 @@ const RARITY_DIR: Record<ItemRarity, string> = {
 /** `armorSetKey` (e.g. "void-guard") selects one of the 12 named sets extracted from the
  * 48-piece reference sheet -- every armor item gets one (rolled on creation, backfilled for
  * older items, see hero-service.ts), so the plain rarity-only path below is only a fallback
- * for the brief moment before a legacy item's backfill has run. */
-export function equipmentIconSrc(slot: EquipmentSlot, weaponType: WeaponType | null, rarity: ItemRarity, armorSetKey?: string | null): string {
+ * for the brief moment before a legacy item's backfill has run.
+ *
+ * `legendaryStyle`, when present, takes priority over `armorSetKey` for LEGENDARY items --
+ * it's a separate cosmetic reskin field (see changeLegendaryStyle in hero-service.ts) that
+ * lets a player display a legendary piece as any of the 3 legendary set looks regardless of
+ * which one it actually rolled as. */
+export function equipmentIconSrc(
+  slot: EquipmentSlot,
+  weaponType: WeaponType | null,
+  rarity: ItemRarity,
+  armorSetKey?: string | null,
+  legendaryStyle?: string | null
+): string {
   if (slot === "WEAPON") {
     const type = weaponType ?? "SWORD";
     return `/hero/weapons/${WEAPON_TYPE_DIR[type]}/${RARITY_DIR[rarity]}/item.png`;
+  }
+  if (rarity === "LEGENDARY" && legendaryStyle && legendaryStyle in LEGENDARY_STYLE_META) {
+    return armorSetIconSrc(slot, LEGENDARY_STYLE_META[legendaryStyle as LegendaryStyleKey].setKey);
   }
   if (armorSetKey) return armorSetIconSrc(slot, armorSetKey);
   return `/hero/armor/${ARMOR_SLOT_DIR[slot]}/${RARITY_DIR[rarity]}/item.png`;
