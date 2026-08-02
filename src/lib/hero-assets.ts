@@ -27,15 +27,34 @@ export const HAIR_COLOR_OPTIONS: { key: HairColorKey; label: string; swatch: str
 ];
 
 /** The provided character sheet contains exactly one drawn hairstyle per gender -- "lang" is
- * not a second hand-drawn style but a derived variant (the source hair strands extruded
- * downward past the shoulders, see generate-long-hair.cjs in the Abschlussbericht), which is
- * why there are two options here rather than the ~8 originally envisioned. Kept as a keyed
- * lookup (not a bare string) so more styles can be added later without changing call sites. */
+ * not a second hand-drawn style but a derived variant (twin tapered locks extruded from the
+ * existing hair mass down past the shoulders, see generate-long-hair.cjs in the
+ * Abschlussbericht), which is why there are two options here rather than the ~8 originally
+ * envisioned. Kept as a keyed lookup (not a bare string) so more styles can be added later
+ * without changing call sites. */
 export type HairStyleKey = "kurz" | "lang";
 export const HAIR_STYLE_OPTIONS: { key: HairStyleKey; label: string }[] = [
   { key: "kurz", label: "Kurz" },
   { key: "lang", label: "Lang" },
 ];
+
+/** There is only one drawn base body per gender (a single flat sprite, not body-part layers),
+ * and every armor piece is anchored to it via fixed percentage zones (see ARMOR_ZONES in
+ * character-sprite.tsx) -- so a body build can only safely change the *scale* of the whole
+ * character (base + armor together, so armor never drifts out of alignment), not reshape
+ * individual body parts (shoulders/waist/arms independently) without new source art. Purely
+ * cosmetic either way: never affects level/XP/items/equipment/strength/pet/rewards. */
+export type BodyBuildKey = "duenn" | "normal" | "muskuloes" | "kraeftig" | "stabil";
+export const BODY_BUILD_OPTIONS: { key: BodyBuildKey; label: string; description: string; scaleX: number; scaleY: number }[] = [
+  { key: "duenn", label: "Dünn", description: "Schlank und leicht", scaleX: 0.9, scaleY: 1.03 },
+  { key: "normal", label: "Normal", description: "Ausgewogene Statur", scaleX: 1, scaleY: 1 },
+  { key: "muskuloes", label: "Muskulös", description: "Athletisch und definiert", scaleX: 1.07, scaleY: 0.99 },
+  { key: "kraeftig", label: "Kräftig", description: "Breit und wuchtig", scaleX: 1.14, scaleY: 0.97 },
+  { key: "stabil", label: "Stabil", description: "Fülliger und bodenständig", scaleX: 1.12, scaleY: 1 },
+];
+export const BODY_BUILD_META: Record<BodyBuildKey, { label: string; scaleX: number; scaleY: number }> = Object.fromEntries(
+  BODY_BUILD_OPTIONS.map((o) => [o.key, { label: o.label, scaleX: o.scaleX, scaleY: o.scaleY }])
+) as Record<BodyBuildKey, { label: string; scaleX: number; scaleY: number }>;
 
 export function characterVariantSrc(
   gender: HeroCharacterTypeLower,

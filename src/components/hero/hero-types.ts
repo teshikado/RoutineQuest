@@ -46,6 +46,7 @@ export type HeroProfileData = {
   skinTone: string;
   hairColor: string;
   hairStyle: string;
+  bodyBuild: string;
   meatBalance: number;
   legacyMigrationCompletedAt: string | Date | null;
 };

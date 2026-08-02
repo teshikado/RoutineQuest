@@ -654,6 +654,9 @@ model HeroProfile {
   skinTone                   String            @default("medium")
   hairStyle                  String            @default("natuerlich")
   hairColor                  String            @default("brown")
+  // Cosmetic-only silhouette scale (see BODY_BUILD_META in hero-assets.ts) -- never affects
+  // level/XP/items/equipment/strength/pet/rewards, purely how the sprite is rendered.
+  bodyBuild                  String            @default("normal")
   eyeColor                   String            @default("#4A3728")
   meatBalance                Int               @default(0)
   legacyMigrationCompletedAt DateTime?

@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CharacterSprite } from "./character-sprite";
+import { CharacterSprite, type EquippedPiece } from "./character-sprite";
 import {
+  BODY_BUILD_OPTIONS,
   HAIR_COLOR_OPTIONS,
   HAIR_STYLE_OPTIONS,
   SKIN_TONE_OPTIONS,
+  type BodyBuildKey,
   type HairColorKey,
   type HairStyleKey,
   type SkinToneKey,
 } from "@/lib/hero-assets";
-import type { HeroCharacterType } from "@prisma/client";
+import type { EquipmentSlot, HeroCharacterType } from "@prisma/client";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 
 /** First-time setup: appearance only -- level-1 starter kit (no armor, no weapon) is
@@ -26,6 +28,7 @@ export function CharacterCreationWizard({
   isEditMode = false,
   level,
   initial,
+  equippedForPreview,
   onComplete,
   onCancel,
 }: {
@@ -33,13 +36,22 @@ export function CharacterCreationWizard({
   isAppearanceUpgradeOnly: boolean;
   isEditMode?: boolean;
   level: number;
-  initial?: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey; hairStyle: HairStyleKey };
+  equippedForPreview?: Partial<Record<EquipmentSlot, EquippedPiece>>;
+  initial?: {
+    heroName: string;
+    characterType: HeroCharacterType;
+    skinTone: SkinToneKey;
+    hairColor: HairColorKey;
+    hairStyle: HairStyleKey;
+    bodyBuild: BodyBuildKey;
+  };
   onComplete: (input: {
     heroName: string;
     characterType: HeroCharacterType;
     skinTone: SkinToneKey;
     hairColor: HairColorKey;
     hairStyle: HairStyleKey;
+    bodyBuild: BodyBuildKey;
   }) => Promise<void>;
   onCancel?: () => void;
 }) {
@@ -49,12 +61,34 @@ export function CharacterCreationWizard({
   const [skinTone, setSkinTone] = useState<SkinToneKey>(initial?.skinTone ?? "medium");
   const [hairColor, setHairColor] = useState<HairColorKey>(initial?.hairColor ?? "brown");
   const [hairStyle, setHairStyle] = useState<HairStyleKey>(initial?.hairStyle ?? "kurz");
+  const [bodyBuild, setBodyBuild] = useState<BodyBuildKey>(initial?.bodyBuild ?? "normal");
   const [saving, setSaving] = useState(false);
+  const hasEquipped = !!equippedForPreview && Object.keys(equippedForPreview).length > 0;
+  const [showArmorPreview, setShowArmorPreview] = useState(false);
+
+  const dirty = !!initial && (
+    heroName !== initial.heroName ||
+    characterType !== initial.characterType ||
+    skinTone !== initial.skinTone ||
+    hairColor !== initial.hairColor ||
+    hairStyle !== initial.hairStyle ||
+    bodyBuild !== initial.bodyBuild
+  );
+
+  function handleReset() {
+    if (!initial) return;
+    setHeroName(initial.heroName);
+    setCharacterType(initial.characterType);
+    setSkinTone(initial.skinTone);
+    setHairColor(initial.hairColor);
+    setHairStyle(initial.hairStyle);
+    setBodyBuild(initial.bodyBuild);
+  }
 
   async function handleSubmit() {
     setSaving(true);
     try {
-      await onComplete({ heroName: heroName.trim(), characterType, skinTone, hairColor, hairStyle });
+      await onComplete({ heroName: heroName.trim(), characterType, skinTone, hairColor, hairStyle, bodyBuild });
     } finally {
       setSaving(false);
     }
@@ -96,8 +130,33 @@ export function CharacterCreationWizard({
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6">
-          <div className="flex justify-center sm:justify-start">
-            <CharacterSprite appearance={{ characterType, skinTone, hairColor, hairStyle }} equipped={{}} reducedMotion={reducedMotion} className="w-36 h-48 sm:w-40 sm:h-56" />
+          <div className="flex flex-col items-center sm:items-start gap-2 sm:sticky sm:top-0 sm:self-start">
+            <CharacterSprite
+              appearance={{ characterType, skinTone, hairColor, hairStyle, bodyBuild }}
+              equipped={showArmorPreview ? equippedForPreview ?? {} : {}}
+              reducedMotion={reducedMotion}
+              className="w-36 h-48 sm:w-40 sm:h-56"
+            />
+            {hasEquipped && (
+              <div className="flex gap-1 rounded-lg bg-[#171720] border border-[#292936] p-0.5 text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setShowArmorPreview(false)}
+                  aria-pressed={!showArmorPreview}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${!showArmorPreview ? "bg-[#A855F7] text-white" : "text-[#8D8998] hover:text-[#C8C5D2]"}`}
+                >
+                  Ohne Rüstung
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowArmorPreview(true)}
+                  aria-pressed={showArmorPreview}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${showArmorPreview ? "bg-[#A855F7] text-white" : "text-[#8D8998] hover:text-[#C8C5D2]"}`}
+                >
+                  Mit Rüstung
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -194,10 +253,43 @@ export function CharacterCreationWizard({
                 ))}
               </div>
             </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Körperstatur</legend>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {BODY_BUILD_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setBodyBuild(opt.key)}
+                    aria-pressed={bodyBuild === opt.key}
+                    title={opt.description}
+                    className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors text-left ${
+                      bodyBuild === opt.key
+                        ? "border-[#A855F7] bg-[#A855F7]/10 text-[#D8B4FE]"
+                        : "border-[#292936] text-[#C8C5D2] hover:border-[#3D2A5C]"
+                    }`}
+                  >
+                    <div>{opt.label}</div>
+                    <div className="text-[10px] font-normal text-[#8D8998]">{opt.description}</div>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex items-center justify-end gap-2 mt-6">
+          {initial && dirty && (
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={saving}
+              className="mr-auto inline-flex items-center gap-1.5 text-xs font-semibold text-[#8D8998] hover:text-[#C8C5D2] transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Zurücksetzen
+            </button>
+          )}
           {onCancel && (
             <Button variant="secondary" onClick={onCancel} disabled={saving}>
               Abbrechen

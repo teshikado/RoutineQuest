@@ -7,7 +7,7 @@ import type { EquipmentSlot, HeroCharacterType, PetSpecies } from "@prisma/clien
 import { Sparkles, Shield, Sword, Gift, History, PawPrint, Drumstick, User, ChevronRight, Pencil } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { EQUIPMENT_SLOT_META, EQUIPMENT_SLOT_ORDER, PET_SPECIES_META, PET_STAGE_META, RARITY_META } from "@/lib/hero-constants";
-import type { HairColorKey, HairStyleKey, SkinToneKey } from "@/lib/hero-assets";
+import type { BodyBuildKey, HairColorKey, HairStyleKey, SkinToneKey } from "@/lib/hero-assets";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { CharacterSprite } from "./character-sprite";
 import { EquipmentSprite } from "./equipment-sprite";
@@ -53,6 +53,18 @@ export function HeroClient({ data }: { data: HeroPageData }) {
   const [activeTab, setActiveTab] = useState<TabKey>("character");
   const [evolutionAcked, setEvolutionAcked] = useState(false);
   const [editingAppearance, setEditingAppearance] = useState(false);
+  // `router.refresh()` re-fetches the server payload in the background -- it does not resolve
+  // when the new data has actually landed, so closing the wizard right after the POST can
+  // briefly show the *old* appearance underneath and read as "my change didn't save". This
+  // override makes the save visible the instant the request succeeds, independent of when the
+  // RSC refresh completes.
+  const [appearanceOverride, setAppearanceOverride] = useState<{
+    characterType: HeroCharacterType;
+    skinTone: SkinToneKey;
+    hairColor: HairColorKey;
+    hairStyle: HairStyleKey;
+    bodyBuild: BodyBuildKey;
+  } | null>(null);
 
   const openedItems = useMemo(() => data.items.filter((i) => i.rewardClaim?.openedAt), [data.items]);
 
@@ -69,10 +81,19 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     skinTone: SkinToneKey;
     hairColor: HairColorKey;
     hairStyle: HairStyleKey;
+    bodyBuild: BodyBuildKey;
   }) {
     try {
       await postJson("/api/hero/character", input);
+      setAppearanceOverride({
+        characterType: input.characterType,
+        skinTone: input.skinTone,
+        hairColor: input.hairColor,
+        hairStyle: input.hairStyle,
+        bodyBuild: input.bodyBuild,
+      });
       setEditingAppearance(false);
+      showToast("Aussehen gespeichert.", "success");
       router.refresh();
     } catch (err) {
       showToast(err instanceof Error ? err.message : GENERIC_ERROR, "error");
@@ -180,13 +201,14 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     );
   }
 
-  const appearance = {
+  const appearance = appearanceOverride ?? {
     characterType: data.profile.characterType ?? "MALE",
     skinTone: data.profile.skinTone as SkinToneKey,
     hairColor: data.profile.hairColor as HairColorKey,
     // Pre-existing profiles carry the old "natuerlich" default from before the "lang" style
     // existed -- treat anything that isn't a known key as "kurz" rather than erroring.
     hairStyle: (data.profile.hairStyle === "lang" ? "lang" : "kurz") as HairStyleKey,
+    bodyBuild: (data.profile.bodyBuild as BodyBuildKey) ?? "normal",
   };
   const equippedForSprite = Object.fromEntries(
     Object.entries(equippedBySlot).map(([slot, item]) => [
@@ -378,6 +400,7 @@ export function HeroClient({ data }: { data: HeroPageData }) {
           isEditMode
           level={data.level}
           initial={{ heroName: data.profile.heroName ?? "", ...appearance }}
+          equippedForPreview={equippedForSprite}
           onComplete={handleCompleteCharacter}
           onCancel={() => setEditingAppearance(false)}
         />

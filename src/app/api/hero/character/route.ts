@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     skinTone: parsed.data.skinTone,
     hairColor: parsed.data.hairColor,
     hairStyle: parsed.data.hairStyle,
+    bodyBuild: parsed.data.bodyBuild,
   });
 
   return NextResponse.json({ profile });

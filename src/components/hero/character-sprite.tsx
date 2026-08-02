@@ -5,9 +5,23 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { EquipmentSlot, HeroCharacterType, ItemRarity, WeaponType } from "@prisma/client";
 import { RARITY_META } from "@/lib/hero-constants";
-import { characterVariantSrc, equipmentIconSrc, type HairColorKey, type HairStyleKey, type SkinToneKey } from "@/lib/hero-assets";
+import {
+  characterVariantSrc,
+  equipmentIconSrc,
+  BODY_BUILD_META,
+  type BodyBuildKey,
+  type HairColorKey,
+  type HairStyleKey,
+  type SkinToneKey,
+} from "@/lib/hero-assets";
 
-export type CharacterAppearance = { characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey; hairStyle: HairStyleKey };
+export type CharacterAppearance = {
+  characterType: HeroCharacterType;
+  skinTone: SkinToneKey;
+  hairColor: HairColorKey;
+  hairStyle: HairStyleKey;
+  bodyBuild?: BodyBuildKey;
+};
 export type EquippedPiece = { slot: EquipmentSlot; rarity: ItemRarity; weaponType: WeaponType | null; armorSetKey?: string | null };
 
 type Zone = { top: string; left: string; width: string; height: string };
@@ -74,6 +88,7 @@ export function CharacterSprite({
   // present rather than stacking a glow per item.
   const rarityOrder: ItemRarity[] = ["LEGENDARY", "EPIC", "RARE", "COMMON"];
   const topRarity = rarityOrder.find((r) => Object.values(equipped).some((e) => e?.rarity === r));
+  const build = BODY_BUILD_META[appearance.bodyBuild ?? "normal"];
 
   return (
     <motion.div
@@ -89,36 +104,44 @@ export function CharacterSprite({
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
         />
       )}
-      <Image
-        src={src}
-        alt={`${gender === "male" ? "Männlicher Held" : "Weibliche Heldin"} in Startkleidung`}
-        fill
-        sizes="240px"
-        className="object-contain"
-        style={{ imageRendering: "pixelated" }}
-        priority
-      />
-      {LAYER_ORDER.filter((slot) => equipped[slot]).map((slot) => {
-        const item = equipped[slot]!;
-        const zone = zoneFor(slot, item.weaponType);
-        const glow = RARITY_GLOW[item.rarity];
-        return (
-          <div
-            key={slot}
-            className="absolute"
-            style={{ top: zone.top, left: zone.left, width: zone.width, height: zone.height, filter: glow ? `drop-shadow(${glow})` : undefined }}
-          >
-            <Image
-              src={equipmentIconSrc(slot, item.weaponType, item.rarity, item.armorSetKey)}
-              alt=""
-              fill
-              sizes="160px"
-              className="object-contain"
-              style={{ imageRendering: "pixelated" }}
-            />
-          </div>
-        );
-      })}
+      {/* Body-build scale wraps the base sprite AND the armor overlays together, since the
+          overlays are positioned as percentages of this same box -- scaling them as one unit
+          keeps armor perfectly aligned at every build instead of drifting off a reshaped body. */}
+      <div
+        className="absolute inset-0"
+        style={{ transform: `scale(${build.scaleX}, ${build.scaleY})`, transformOrigin: "50% 100%" }}
+      >
+        <Image
+          src={src}
+          alt={`${gender === "male" ? "Männlicher Held" : "Weibliche Heldin"} in Startkleidung`}
+          fill
+          sizes="240px"
+          className="object-contain"
+          style={{ imageRendering: "pixelated" }}
+          priority
+        />
+        {LAYER_ORDER.filter((slot) => equipped[slot]).map((slot) => {
+          const item = equipped[slot]!;
+          const zone = zoneFor(slot, item.weaponType);
+          const glow = RARITY_GLOW[item.rarity];
+          return (
+            <div
+              key={slot}
+              className="absolute"
+              style={{ top: zone.top, left: zone.left, width: zone.width, height: zone.height, filter: glow ? `drop-shadow(${glow})` : undefined }}
+            >
+              <Image
+                src={equipmentIconSrc(slot, item.weaponType, item.rarity, item.armorSetKey)}
+                alt=""
+                fill
+                sizes="160px"
+                className="object-contain"
+                style={{ imageRendering: "pixelated" }}
+              />
+            </div>
+          );
+        })}
+      </div>
     </motion.div>
   );
 }
