@@ -73,12 +73,21 @@ const RARITY_DIR: Record<ItemRarity, string> = {
   LEGENDARY: "legendary",
 };
 
-export function equipmentIconSrc(slot: EquipmentSlot, weaponType: WeaponType | null, rarity: ItemRarity): string {
+/** `armorSetKey` (e.g. "void-guard") selects one of the 12 named sets extracted from the
+ * 48-piece reference sheet -- every armor item gets one (rolled on creation, backfilled for
+ * older items, see hero-service.ts), so the plain rarity-only path below is only a fallback
+ * for the brief moment before a legacy item's backfill has run. */
+export function equipmentIconSrc(slot: EquipmentSlot, weaponType: WeaponType | null, rarity: ItemRarity, armorSetKey?: string | null): string {
   if (slot === "WEAPON") {
     const type = weaponType ?? "SWORD";
     return `/hero/weapons/${WEAPON_TYPE_DIR[type]}/${RARITY_DIR[rarity]}/item.png`;
   }
+  if (armorSetKey) return armorSetIconSrc(slot, armorSetKey);
   return `/hero/armor/${ARMOR_SLOT_DIR[slot]}/${RARITY_DIR[rarity]}/item.png`;
+}
+
+export function armorSetIconSrc(slot: Exclude<EquipmentSlot, "WEAPON">, armorSetKey: string): string {
+  return `/hero/armor-sets/${armorSetKey}/${ARMOR_SLOT_DIR[slot]}-icon.png`;
 }
 
 const PET_SPECIES_DIR: Record<PetSpecies, string> = {

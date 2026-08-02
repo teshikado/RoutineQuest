@@ -298,3 +298,7 @@ export const heroPetSelectSchema = z.object({
 export const heroItemActionSchema = z.object({
   itemId: z.string().min(1),
 });
+
+export const heroEquipSetSchema = z.object({
+  armorSetKey: z.string().min(1),
+});

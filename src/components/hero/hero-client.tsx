@@ -128,6 +128,16 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     }
   }
 
+  async function handleEquipSet(armorSetKey: string) {
+    try {
+      await postJson("/api/hero/equip-set", { armorSetKey });
+      showToast("Vollständiges Set ausgerüstet.", "success");
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : GENERIC_ERROR, "error");
+    }
+  }
+
   async function handleOpenReward(claimId: string): Promise<HeroRewardClaim> {
     try {
       const result = await postJson(`/api/hero/rewards/${claimId}/open`);
@@ -179,7 +189,10 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     hairStyle: (data.profile.hairStyle === "lang" ? "lang" : "kurz") as HairStyleKey,
   };
   const equippedForSprite = Object.fromEntries(
-    Object.entries(equippedBySlot).map(([slot, item]) => [slot, { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType }])
+    Object.entries(equippedBySlot).map(([slot, item]) => [
+      slot,
+      { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType, armorSetKey: item!.armorSetKey },
+    ])
   );
 
   return (
@@ -301,7 +314,7 @@ export function HeroClient({ data }: { data: HeroPageData }) {
                   return (
                     <div key={slot} className="flex items-center gap-3 rounded-xl border border-[#292936] bg-[#171720] p-3">
                       {item ? (
-                        <EquipmentSprite slot={slot} weaponType={item.weaponType} rarity={item.rarity} className="w-14 h-14 shrink-0" title={item.name} />
+                        <EquipmentSprite slot={slot} weaponType={item.weaponType} rarity={item.rarity} armorSetKey={item.armorSetKey} className="w-14 h-14 shrink-0" title={item.name} />
                       ) : (
                         <div className="w-14 h-14 rounded-lg bg-[#111118] flex items-center justify-center text-[10px] text-[#5F5B68] shrink-0">Leer</div>
                       )}
@@ -335,7 +348,7 @@ export function HeroClient({ data }: { data: HeroPageData }) {
           )}
 
           {activeTab === "inventory" && (
-            <InventoryPanel items={openedItems} onEquip={handleEquip} onUnequip={handleUnequip} onFavorite={handleFavorite} />
+            <InventoryPanel items={openedItems} onEquip={handleEquip} onUnequip={handleUnequip} onFavorite={handleFavorite} onEquipSet={handleEquipSet} />
           )}
 
           {activeTab === "pet" && (

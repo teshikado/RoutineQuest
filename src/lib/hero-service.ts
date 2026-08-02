@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { getLevelProgress } from "./xp";
 import { todayDateOnly } from "./dates";
 import {
+  ARMOR_SET_KEYS_BY_RARITY,
   LEVEL_STRENGTH_BONUS_CAP,
   MEAT_DAILY_GOAL,
   MEAT_FEED_AMOUNT,
@@ -17,8 +18,10 @@ import {
   SLOT_WEIGHTS,
   WEAPON_TYPE_META,
   WEAPON_TYPE_ORDER,
+  armorSetItemName,
+  deterministicSetKeyForRarity,
   levelStrengthBonus,
-  nameOptionsFor,
+  weaponNameOptions,
   petStageForLevel,
 } from "./hero-constants";
 
@@ -37,6 +40,7 @@ export type HeroErrorCode =
   | "NOT_ENOUGH_MEAT"
   | "FEEDING_FAILED"
   | "LEGACY_MIGRATION_FAILED"
+  | "ARMOR_SET_INCOMPLETE"
   | "NOT_AUTHORIZED";
 
 export class HeroError extends Error {
@@ -63,6 +67,7 @@ export const HERO_ERROR_MESSAGES: Record<HeroErrorCode, string> = {
   NOT_ENOUGH_MEAT: "Du hast nicht genug Fleisch.",
   FEEDING_FAILED: "Dein Haustier konnte nicht gefüttert werden.",
   LEGACY_MIGRATION_FAILED: "Die rückwirkenden Belohnungen konnten nicht vollständig erstellt werden.",
+  ARMOR_SET_INCOMPLETE: "Du besitzt noch nicht alle vier Teile dieses Sets.",
   NOT_AUTHORIZED: "Nicht angemeldet.",
 };
 
@@ -120,11 +125,19 @@ async function generateRewardForLevel(tx: TxClient, userId: string, level: numbe
     speed = Math.round(strength * profile.speed);
   }
 
-  const names = nameOptionsFor(slot, weaponType, rarity);
-  const name = names[Math.floor(Math.random() * names.length)];
+  let name: string;
+  let armorSetKey: string | null = null;
+  if (slot === "WEAPON" && weaponType) {
+    const names = weaponNameOptions(weaponType, rarity);
+    name = names[Math.floor(Math.random() * names.length)];
+  } else {
+    const setKeys = ARMOR_SET_KEYS_BY_RARITY[rarity];
+    armorSetKey = setKeys[Math.floor(Math.random() * setKeys.length)];
+    name = armorSetItemName(slot as Exclude<EquipmentSlot, "WEAPON">, armorSetKey as Parameters<typeof armorSetItemName>[1]);
+  }
 
   const item = await tx.equipmentItem.create({
-    data: { userId, rewardLevel: level, slot, rarity, weaponType, name, strength, attack, defense, health, speed, criticalChance },
+    data: { userId, rewardLevel: level, slot, rarity, weaponType, armorSetKey, name, strength, attack, defense, health, speed, criticalChance },
   });
   await tx.heroRewardClaim.create({ data: { userId, level, itemId: item.id, isMilestone } });
   return item;
@@ -186,11 +199,32 @@ function computeHeroStrength(level: number, equippedStrengthSum: number, petBonu
   return level * 5 + equippedStrengthSum + petBonus;
 }
 
+/** Idempotently assigns a set to every armor item (any slot but WEAPON) that predates the
+ * set system, using a deterministic hash of the item's own ID so the same item always lands
+ * on the same set across reloads/devices -- never re-rolled, never touches rarity/strength/
+ * stats/name-independent fields. A no-op once every item has one. */
+async function backfillArmorSetKeys(userId: string) {
+  const unset = await prisma.equipmentItem.findMany({
+    where: { userId, armorSetKey: null, slot: { not: "WEAPON" } },
+    select: { id: true, rarity: true },
+  });
+  if (unset.length === 0) return;
+  await prisma.$transaction(
+    unset.map((item) =>
+      prisma.equipmentItem.update({
+        where: { id: item.id },
+        data: { armorSetKey: deterministicSetKeyForRarity(item.id, item.rarity) },
+      })
+    )
+  );
+}
+
 export async function getHeroPageData(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const level = getLevelProgress(user.totalXp).level;
 
   await ensureRewardsUpToLevel(userId, level);
+  await backfillArmorSetKeys(userId);
 
   const [profile, items, claims, pet, todayFeedLogs] = await Promise.all([
     ensureHeroProfile(prisma, userId),
@@ -287,6 +321,35 @@ export async function equipItem(userId: string, itemId: string) {
 
     await tx.equipmentItem.updateMany({ where: { userId, slot: item.slot, isEquipped: true }, data: { isEquipped: false } });
     await tx.equipmentItem.update({ where: { id: itemId }, data: { isEquipped: true } });
+  });
+}
+
+/** Equips one piece per armor slot (helmet/chest/pants/shoes) for the given set key -- all
+ * four must already be owned by this user or nothing is changed. When a user owns more than
+ * one piece of the same set+slot (possible if they got duplicate rolls), the highest-strength
+ * one is used. Runs as a single transaction so a partial equip can never happen. */
+export async function equipArmorSet(userId: string, armorSetKey: string) {
+  return prisma.$transaction(async (tx) => {
+    const owned = await tx.equipmentItem.findMany({
+      where: { userId, armorSetKey, rewardClaim: { openedAt: { not: null } } },
+      include: { rewardClaim: true },
+      orderBy: { strength: "desc" },
+    });
+    const bySlot = new Map<EquipmentSlot, (typeof owned)[number]>();
+    for (const item of owned) {
+      if (!bySlot.has(item.slot)) bySlot.set(item.slot, item);
+    }
+    const requiredSlots: EquipmentSlot[] = ["HELMET", "CHEST", "PANTS", "SHOES"];
+    const toEquip = requiredSlots.map((slot) => bySlot.get(slot));
+    if (toEquip.some((item) => !item)) {
+      throw new HeroError("Du besitzt noch nicht alle vier Teile dieses Sets.", "ARMOR_SET_INCOMPLETE");
+    }
+    for (const slot of requiredSlots) {
+      await tx.equipmentItem.updateMany({ where: { userId, slot, isEquipped: true }, data: { isEquipped: false } });
+    }
+    for (const item of toEquip) {
+      await tx.equipmentItem.update({ where: { id: item!.id }, data: { isEquipped: true } });
+    }
   });
 }
 

@@ -39,6 +39,62 @@ export function levelStrengthBonus(level: number): number {
   return Math.min(LEVEL_STRENGTH_BONUS_CAP, Math.floor(level / 2));
 }
 
+// ---------- Armor sets ----------
+// Twelve fixed thematic sets (3 per rarity), matching the 48-piece reference sheet. A set
+// determines appearance/name/theme only -- strength, stats, and rarity are still rolled the
+// same way as before (see generateRewardForLevel in hero-service.ts); the set is not meant
+// to make one of the three same-rarity options systematically stronger than the others.
+export type ArmorSetKey =
+  | "iron-guard"
+  | "wander-hunter"
+  | "north-fur"
+  | "sapphire-guard"
+  | "arcane-keeper"
+  | "night-runner"
+  | "void-guard"
+  | "rune-lord"
+  | "shadow-blade"
+  | "sky-warden"
+  | "sun-king"
+  | "star-breaker";
+
+export const ARMOR_SET_KEYS_BY_RARITY: Record<ItemRarity, ArmorSetKey[]> = {
+  COMMON: ["iron-guard", "wander-hunter", "north-fur"],
+  RARE: ["sapphire-guard", "arcane-keeper", "night-runner"],
+  EPIC: ["void-guard", "rune-lord", "shadow-blade"],
+  LEGENDARY: ["sky-warden", "sun-king", "star-breaker"],
+};
+
+export const ARMOR_SET_META: Record<ArmorSetKey, { label: string; genitive: string; rarity: ItemRarity; theme: string }> = {
+  "iron-guard": { label: "Eisenwache", genitive: "der Eisenwache", rarity: "COMMON", theme: "Einfacher, sauberer Abenteurer-Look aus Grau, Silber und Braun." },
+  "wander-hunter": { label: "Wanderjäger", genitive: "des Wanderjägers", rarity: "COMMON", theme: "Beweglicher Waldläufer-Look aus Leder in Braun und Dunkelgrün." },
+  "north-fur": { label: "Nordpelz", genitive: "des Nordpelzes", rarity: "COMMON", theme: "Warmer nordischer Look mit Pelzbesatz." },
+  "sapphire-guard": { label: "Saphirwache", genitive: "der Saphirwache", rarity: "RARE", theme: "Silberblaue Ritterrüstung mit leuchtendem Blau." },
+  "arcane-keeper": { label: "Arkanhüter", genitive: "des Arkanhüters", rarity: "RARE", theme: "Magische Rüstung mit blauem Kristall in Dunkelblau und Gold." },
+  "night-runner": { label: "Nachtläufer", genitive: "des Nachtläufers", rarity: "RARE", theme: "Schlanke, dunkle Rüstung in Navy und Blau." },
+  "void-guard": { label: "Leerenwache", genitive: "der Leerenwache", rarity: "EPIC", theme: "Schwere lila Kristallrüstung in Dunkellila, Violett und Schwarz." },
+  "rune-lord": { label: "Runenfürst", genitive: "des Runenfürsten", rarity: "EPIC", theme: "Lila-goldene Runenrüstung mit langer verzierter Beinkleidung." },
+  "shadow-blade": { label: "Schattenklinge", genitive: "der Schattenklinge", rarity: "EPIC", theme: "Elegante Schattenrüstung in Schwarz, Lila und Silber." },
+  "sky-warden": { label: "Himmelswächter", genitive: "des Himmelswächters", rarity: "LEGENDARY", theme: "Geflügelte weiß-goldene Rüstung mit Blau." },
+  "sun-king": { label: "Sonnenkönig", genitive: "des Sonnenkönigs", rarity: "LEGENDARY", theme: "Schwere königliche Goldrüstung in Gold, Dunkelblau und Weiß." },
+  "star-breaker": { label: "Sternenbrecher", genitive: "des Sternenbrechers", rarity: "LEGENDARY", theme: "Moderne goldene Energierüstung mit leuchtendem Cyan." },
+};
+
+export const ARMOR_SET_KEY_ORDER: ArmorSetKey[] = Object.keys(ARMOR_SET_META) as ArmorSetKey[];
+
+export function armorSetItemName(slot: Exclude<EquipmentSlot, "WEAPON">, setKey: ArmorSetKey): string {
+  return `${EQUIPMENT_SLOT_META[slot].label} ${ARMOR_SET_META[setKey].genitive}`;
+}
+
+/** Deterministic (not random-per-render) set assignment for items that predate the set
+ * system -- same item always maps to the same set, across reloads and devices. */
+export function deterministicSetKeyForRarity(itemId: string, rarity: ItemRarity): ArmorSetKey {
+  let hash = 0;
+  for (let i = 0; i < itemId.length; i++) hash = (hash * 31 + itemId.charCodeAt(i)) >>> 0;
+  const keys = ARMOR_SET_KEYS_BY_RARITY[rarity];
+  return keys[hash % keys.length];
+}
+
 export const EQUIPMENT_SLOT_META: Record<EquipmentSlot, { label: string; icon: string }> = {
   HELMET: { label: "Helm", icon: "HardHat" },
   CHEST: { label: "Oberteil", icon: "Shirt" },
@@ -123,36 +179,10 @@ export const MEAT_DAILY_GOAL = 30;
 export const MEAT_VERY_FULL_THRESHOLD = 50;
 
 // ---------- Item naming ----------
-// Original names, organized by category (armor slot or weapon type) and rarity. Not lifted
-// from any existing game -- see hero-service.ts for how one is picked and combined with a
-// rolled numeric strength.
-
-const ARMOR_NAMES: Record<Exclude<EquipmentSlot, "WEAPON">, Record<ItemRarity, string[]>> = {
-  HELMET: {
-    COMMON: ["Einfacher Eisenhelm", "Lederkappe", "Abgewetzter Reisehelm"],
-    RARE: ["Helm des Nachtwächters", "Sturmhelm der Wanderer", "Visier des stillen Pfades"],
-    EPIC: ["Krone der Leerenwache", "Helm des violetten Sturms", "Maske des Schattenrichters"],
-    LEGENDARY: ["Helm des unsterblichen Herrschers", "Krone der schwarzen Sonne", "Diadem des Sternenwächters"],
-  },
-  CHEST: {
-    COMMON: ["Lederoberteil", "Einfaches Unterhemd", "Grobe Wanderjacke"],
-    RARE: ["Verstärkte Schattenrüstung", "Panzer des Nachtläufers", "Weste der Sturmreiter"],
-    EPIC: ["Rüstung des violetten Ritters", "Panzer der Leerenklinge", "Brustharnisch des Nachtkönigs"],
-    LEGENDARY: ["Rüstung der schwarzen Sonne", "Panzer des Weltenendes", "Harnisch des ewigen Herrschers"],
-  },
-  PANTS: {
-    COMMON: ["Reisende Hose", "Einfache Stoffhose", "Grobe Feldhose"],
-    RARE: ["Mondläufer-Hose", "Beinschutz der Nachtwache", "Hose der Sturmläufer"],
-    EPIC: ["Beinschutz des Schattenkönigs", "Hose der Leerenwanderer", "Beinpanzer des violetten Sturms"],
-    LEGENDARY: ["Beinschutz des Weltenbrechers", "Hose der schwarzen Sonne", "Beinpanzer des Sternenherrschers"],
-  },
-  SHOES: {
-    COMMON: ["Abgenutzte Stiefel", "Einfache Sandalen", "Grobe Wanderschuhe"],
-    RARE: ["Stiefel der Geschwindigkeit", "Schuhe des Nachtläufers", "Treter der Sturmboten"],
-    EPIC: ["Stiefel des Dimensionsläufers", "Schuhe der Leerenwache", "Treter des violetten Sturms"],
-    LEGENDARY: ["Stiefel der Sternenreise", "Schuhe des Weltenwanderers", "Treter der ewigen Nacht"],
-  },
-};
+// Weapon names: original names, organized by weapon type and rarity, not lifted from any
+// existing game. Armor names are no longer a random pool -- since the set system, an armor
+// item's name is derived deterministically from its slot + assigned set (armorSetItemName
+// above), so the same set always produces the same name across every piece of it.
 
 const WEAPON_NAMES: Record<WeaponType, Record<ItemRarity, string[]>> = {
   KATANA: {
@@ -187,8 +217,6 @@ const WEAPON_NAMES: Record<WeaponType, Record<ItemRarity, string[]>> = {
   },
 };
 
-export function nameOptionsFor(slot: EquipmentSlot, weaponType: WeaponType | null, rarity: ItemRarity): string[] {
-  if (slot === "WEAPON" && weaponType) return WEAPON_NAMES[weaponType][rarity];
-  if (slot !== "WEAPON") return ARMOR_NAMES[slot][rarity];
-  return WEAPON_NAMES.SWORD[rarity];
+export function weaponNameOptions(weaponType: WeaponType, rarity: ItemRarity): string[] {
+  return WEAPON_NAMES[weaponType][rarity];
 }

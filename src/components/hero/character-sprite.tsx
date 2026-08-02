@@ -8,7 +8,7 @@ import { RARITY_META } from "@/lib/hero-constants";
 import { characterVariantSrc, equipmentIconSrc, type HairColorKey, type HairStyleKey, type SkinToneKey } from "@/lib/hero-assets";
 
 export type CharacterAppearance = { characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey; hairStyle: HairStyleKey };
-export type EquippedPiece = { slot: EquipmentSlot; rarity: ItemRarity; weaponType: WeaponType | null };
+export type EquippedPiece = { slot: EquipmentSlot; rarity: ItemRarity; weaponType: WeaponType | null; armorSetKey?: string | null };
 
 type Zone = { top: string; left: string; width: string; height: string };
 
@@ -109,7 +109,7 @@ export function CharacterSprite({
             style={{ top: zone.top, left: zone.left, width: zone.width, height: zone.height, filter: glow ? `drop-shadow(${glow})` : undefined }}
           >
             <Image
-              src={equipmentIconSrc(slot, item.weaponType, item.rarity)}
+              src={equipmentIconSrc(slot, item.weaponType, item.rarity, item.armorSetKey)}
               alt=""
               fill
               sizes="160px"

@@ -674,6 +674,11 @@ model EquipmentItem {
   slot           EquipmentSlot
   rarity         ItemRarity
   weaponType     WeaponType?
+  // Which of the 3 thematic sets (per rarity) this armor piece visually belongs to -- null
+  // for weapons (sets are armor-only) and for any pre-set-system item until backfilled.
+  // A String (not an enum) to match the existing skinTone/hairColor/hairStyle convention for
+  // cosmetic/asset-key fields on this model family.
+  armorSetKey    String?
   name           String
   strength       Int
   attack         Int           @default(0)

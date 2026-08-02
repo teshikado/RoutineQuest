@@ -7,6 +7,7 @@ export type HeroItemFields = {
   slot: EquipmentSlot;
   rarity: ItemRarity;
   weaponType: WeaponType | null;
+  armorSetKey: string | null;
   name: string;
   strength: number;
   attack: number;
