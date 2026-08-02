@@ -601,6 +601,11 @@ model DashboardItemOrder {
 // (brand-new signup) or many levels (a pre-update account) -- so there is deliberately no
 // separate migration code path, just one idempotent "make sure every level has a claim" step.
 
+enum HeroCharacterType {
+  MALE
+  FEMALE
+}
+
 enum EquipmentSlot {
   HELMET
   CHEST
@@ -642,17 +647,18 @@ enum MeatTransactionType {
 }
 
 model HeroProfile {
-  id                         String    @id @default(cuid())
-  userId                     String    @unique
+  id                         String            @id @default(cuid())
+  userId                     String            @unique
   heroName                   String?
-  skinTone                   String    @default("#E8B48C")
-  hairStyle                  String    @default("short")
-  hairColor                  String    @default("#3A2A1E")
-  eyeColor                   String    @default("#4A3728")
-  meatBalance                Int       @default(0)
+  characterType              HeroCharacterType?
+  skinTone                   String            @default("medium")
+  hairStyle                  String            @default("natuerlich")
+  hairColor                  String            @default("brown")
+  eyeColor                   String            @default("#4A3728")
+  meatBalance                Int               @default(0)
   legacyMigrationCompletedAt DateTime?
-  createdAt                  DateTime  @default(now())
-  updatedAt                  DateTime  @updatedAt
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

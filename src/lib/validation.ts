@@ -285,10 +285,9 @@ export const dayReviewSchema = z.object({
 
 export const heroCharacterSchema = z.object({
   heroName: z.string().trim().max(24).optional().nullable(),
-  skinTone: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  hairStyle: z.enum(["short", "long", "mohawk", "bald", "curly"]),
-  hairColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  eyeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  characterType: z.enum(["MALE", "FEMALE"]),
+  skinTone: z.enum(["very-light", "light", "medium", "dark", "very-dark"]),
+  hairColor: z.enum(["black", "brown", "blonde", "red", "gray", "purple"]),
 });
 
 export const heroPetSelectSchema = z.object({

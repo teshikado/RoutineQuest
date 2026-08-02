@@ -1,4 +1,4 @@
-import { Prisma, type EquipmentSlot, type ItemRarity, type PetSpecies, type WeaponType } from "@prisma/client";
+import { Prisma, type EquipmentSlot, type HeroCharacterType, type ItemRarity, type PetSpecies, type WeaponType } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getLevelProgress } from "./xp";
 import { todayDateOnly } from "./dates";
@@ -167,9 +167,13 @@ export async function ensureRewardsUpToLevel(userId: string, currentLevel: numbe
 /** Marks the user's initial appearance setup as complete -- gates whether the character
  * creation wizard shows on the Held page. Pet selection is intentionally independent (see
  * selectPet) since a user can finish appearance setup and pick a pet moments later. */
+/** Handles both the initial character-creation flow AND later "Charakterdarstellung ändern"
+ * edits (same endpoint, see /api/hero/character) -- either way only appearance fields are
+ * touched. `legacyMigrationCompletedAt` is set (or re-set, harmlessly) every call, which is
+ * fine since it only ever gates whether the creation wizard shows, not appearance data. */
 export async function completeCharacterSetup(
   userId: string,
-  input: { heroName: string | null; skinTone: string; hairStyle: string; hairColor: string; eyeColor: string }
+  input: { heroName: string | null; characterType: HeroCharacterType; skinTone: string; hairColor: string }
 ) {
   return prisma.heroProfile.upsert({
     where: { userId },
@@ -208,8 +212,15 @@ export async function getHeroPageData(userId: string) {
 
   const todayMeat = todayFeedLogs.reduce((s, l) => s + l.amount, 0);
   const pendingClaims = claims.filter((c) => !c.openedAt);
-  const needsCharacterSetup = !profile.legacyMigrationCompletedAt;
-  const isLegacyWelcome = needsCharacterSetup && level > 1;
+  // Gated on characterType specifically (not legacyMigrationCompletedAt) so an account that
+  // already completed hero setup *before* male/female selection existed is still prompted
+  // once for just that, without losing anything else (see completeCharacterSetup).
+  const needsCharacterSetup = !profile.characterType;
+  const isLegacyWelcome = needsCharacterSetup && level > 1 && !profile.legacyMigrationCompletedAt;
+  // True for an account that already has a hero (items/pet/rewards) from before character
+  // types existed -- gates the wizard's copy toward "choose your look" rather than
+  // "welcome to the hero system" or the plain first-time flow.
+  const isAppearanceUpgradeOnly = needsCharacterSetup && !!profile.legacyMigrationCompletedAt;
 
   return {
     level,
@@ -228,6 +239,7 @@ export async function getHeroPageData(userId: string) {
     justEvolved,
     needsCharacterSetup,
     isLegacyWelcome,
+    isAppearanceUpgradeOnly,
   };
 }
 
@@ -238,7 +250,7 @@ export async function getHeroDashboardSummary(userId: string) {
   const level = getLevelProgress(user.totalXp).level;
   const profile = await prisma.heroProfile.findUnique({ where: { userId } });
 
-  if (!profile || !profile.legacyMigrationCompletedAt) {
+  if (!profile || !profile.characterType) {
     return { needsCharacterSetup: true as const, level };
   }
 

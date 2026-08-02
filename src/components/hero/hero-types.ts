@@ -1,4 +1,5 @@
-import type { EquipmentSlot, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
+import type { EquipmentSlot, HeroCharacterType, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
+import type { HairColorKey, SkinToneKey } from "@/lib/hero-assets";
 
 export type HeroItemFields = {
   id: string;
@@ -40,13 +41,14 @@ export type HeroPet = {
 
 export type HeroProfileData = {
   heroName: string | null;
+  characterType: HeroCharacterType | null;
   skinTone: string;
-  hairStyle: string;
   hairColor: string;
-  eyeColor: string;
   meatBalance: number;
   legacyMigrationCompletedAt: string | Date | null;
 };
+
+export type HeroAppearance = { characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey };
 
 export type HeroPageData = {
   level: number;
@@ -65,4 +67,5 @@ export type HeroPageData = {
   justEvolved: boolean;
   needsCharacterSetup: boolean;
   isLegacyWelcome: boolean;
+  isAppearanceUpgradeOnly: boolean;
 };

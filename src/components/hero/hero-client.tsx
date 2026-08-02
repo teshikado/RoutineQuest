@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import type { EquipmentSlot, PetSpecies } from "@prisma/client";
-import { Sparkles, Shield, Sword, Gift, History, PawPrint, Drumstick, User, ChevronRight } from "lucide-react";
+import type { EquipmentSlot, HeroCharacterType, PetSpecies } from "@prisma/client";
+import { Sparkles, Shield, Sword, Gift, History, PawPrint, Drumstick, User, ChevronRight, Pencil } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { EQUIPMENT_SLOT_META, EQUIPMENT_SLOT_ORDER, PET_SPECIES_META, PET_STAGE_META, RARITY_META } from "@/lib/hero-constants";
+import type { HairColorKey, SkinToneKey } from "@/lib/hero-assets";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { CharacterSprite } from "./character-sprite";
 import { EquipmentSprite } from "./equipment-sprite";
@@ -51,6 +52,7 @@ export function HeroClient({ data }: { data: HeroPageData }) {
   const reducedMotion = usePrefersReducedMotion();
   const [activeTab, setActiveTab] = useState<TabKey>("character");
   const [evolutionAcked, setEvolutionAcked] = useState(false);
+  const [editingAppearance, setEditingAppearance] = useState(false);
 
   const openedItems = useMemo(() => data.items.filter((i) => i.rewardClaim?.openedAt), [data.items]);
 
@@ -61,9 +63,10 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     return map;
   }, [equippedItems]);
 
-  async function handleCompleteCharacter(input: { heroName: string; skinTone: string; hairStyle: string; hairColor: string; eyeColor: string }) {
+  async function handleCompleteCharacter(input: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey }) {
     try {
       await postJson("/api/hero/character", input);
+      setEditingAppearance(false);
       router.refresh();
     } catch (err) {
       showToast(err instanceof Error ? err.message : GENERIC_ERROR, "error");
@@ -151,14 +154,20 @@ export function HeroClient({ data }: { data: HeroPageData }) {
   }
 
   if (data.needsCharacterSetup) {
-    return <CharacterCreationWizard isLegacyWelcome={data.isLegacyWelcome} level={data.level} onComplete={handleCompleteCharacter} />;
+    return (
+      <CharacterCreationWizard
+        isLegacyWelcome={data.isLegacyWelcome}
+        isAppearanceUpgradeOnly={data.isAppearanceUpgradeOnly}
+        level={data.level}
+        onComplete={handleCompleteCharacter}
+      />
+    );
   }
 
   const appearance = {
-    skinTone: data.profile.skinTone,
-    hairStyle: data.profile.hairStyle as "short" | "long" | "mohawk" | "bald" | "curly",
-    hairColor: data.profile.hairColor,
-    eyeColor: data.profile.eyeColor,
+    characterType: data.profile.characterType ?? "MALE",
+    skinTone: data.profile.skinTone as SkinToneKey,
+    hairColor: data.profile.hairColor as HairColorKey,
   };
   const equippedForSprite = Object.fromEntries(
     Object.entries(equippedBySlot).map(([slot, item]) => [slot, { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType }])
@@ -239,6 +248,13 @@ export function HeroClient({ data }: { data: HeroPageData }) {
                 <div className="text-sm text-[#C8C5D2]">Level {data.level}</div>
                 <div className="text-2xl font-extrabold text-[#A855F7] mt-2 tabular-nums">Heldenstärke: {data.heroStrength}</div>
               </div>
+              <button
+                type="button"
+                onClick={() => setEditingAppearance(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#A855F7] hover:text-[#C084FC] rounded-lg px-3 py-1.5 hover:bg-[#171720] transition-colors focus-visible:outline-none"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Charakterdarstellung ändern
+              </button>
             </div>
           )}
 
@@ -320,6 +336,18 @@ export function HeroClient({ data }: { data: HeroPageData }) {
 
       {data.justEvolved && data.pet && data.stage && !evolutionAcked && (
         <PetEvolutionModal species={data.pet.species} stage={data.stage} onClose={handleAcknowledgeEvolution} reducedMotion={reducedMotion} />
+      )}
+
+      {editingAppearance && (
+        <CharacterCreationWizard
+          isLegacyWelcome={false}
+          isAppearanceUpgradeOnly={false}
+          isEditMode
+          level={data.level}
+          initial={{ heroName: data.profile.heroName ?? "", ...appearance }}
+          onComplete={handleCompleteCharacter}
+          onCancel={() => setEditingAppearance(false)}
+        />
       )}
     </div>
   );

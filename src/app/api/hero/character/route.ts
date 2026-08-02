@@ -15,10 +15,9 @@ export async function POST(req: Request) {
 
   const profile = await completeCharacterSetup(userId, {
     heroName: parsed.data.heroName?.trim() || null,
+    characterType: parsed.data.characterType,
     skinTone: parsed.data.skinTone,
-    hairStyle: parsed.data.hairStyle,
     hairColor: parsed.data.hairColor,
-    eyeColor: parsed.data.eyeColor,
   });
 
   return NextResponse.json({ profile });

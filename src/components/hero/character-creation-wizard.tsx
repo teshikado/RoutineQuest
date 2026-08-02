@@ -1,47 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CharacterSprite, type CharacterAppearance } from "./character-sprite";
+import { CharacterSprite } from "./character-sprite";
+import { HAIR_COLOR_OPTIONS, SKIN_TONE_OPTIONS, type HairColorKey, type SkinToneKey } from "@/lib/hero-assets";
+import type { HeroCharacterType } from "@prisma/client";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
-
-const SKIN_TONES = ["#F5D5B8", "#E8B48C", "#C68863", "#9C6844", "#6B4530", "#4A2F1F"];
-const HAIR_COLORS = ["#1A1A1F", "#3A2A1E", "#6B4226", "#A85C32", "#D4A94C", "#E8E8EC", "#A855F7", "#38BDF8"];
-const EYE_COLORS = ["#4A3728", "#2E6B4F", "#2E5B8A", "#5B2E8A", "#111118"];
-const HAIR_STYLES: { value: CharacterAppearance["hairStyle"]; label: string }[] = [
-  { value: "short", label: "Kurz" },
-  { value: "long", label: "Lang" },
-  { value: "mohawk", label: "Irokese" },
-  { value: "curly", label: "Lockig" },
-  { value: "bald", label: "Kahl" },
-];
 
 /** First-time setup: appearance only -- level-1 starter kit (no armor, no weapon) is
  * enforced simply by never passing any `equipped` pieces to the preview here. Pet selection
- * is a separate, independent step reachable right after (see hero-client.tsx), so a user
- * can finish this quickly and pick a pet moments later without it blocking here. */
+ * is a separate, independent step reachable right after (see hero-client.tsx). Also reused
+ * for accounts that already had a hero before character types existed (`upgradeMode`), in
+ * which case only the wording changes -- their items/pet/strength/rewards are untouched. */
 export function CharacterCreationWizard({
   isLegacyWelcome,
+  isAppearanceUpgradeOnly,
+  isEditMode = false,
   level,
+  initial,
   onComplete,
+  onCancel,
 }: {
   isLegacyWelcome: boolean;
+  isAppearanceUpgradeOnly: boolean;
+  isEditMode?: boolean;
   level: number;
-  onComplete: (appearance: CharacterAppearance & { heroName: string }) => Promise<void>;
+  initial?: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey };
+  onComplete: (input: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey }) => Promise<void>;
+  onCancel?: () => void;
 }) {
   const reducedMotion = usePrefersReducedMotion();
-  const [heroName, setHeroName] = useState("");
-  const [skinTone, setSkinTone] = useState(SKIN_TONES[1]);
-  const [hairStyle, setHairStyle] = useState<CharacterAppearance["hairStyle"]>("short");
-  const [hairColor, setHairColor] = useState(HAIR_COLORS[1]);
-  const [eyeColor, setEyeColor] = useState(EYE_COLORS[0]);
+  const [heroName, setHeroName] = useState(initial?.heroName ?? "");
+  const [characterType, setCharacterType] = useState<HeroCharacterType>(initial?.characterType ?? "MALE");
+  const [skinTone, setSkinTone] = useState<SkinToneKey>(initial?.skinTone ?? "medium");
+  const [hairColor, setHairColor] = useState<HairColorKey>(initial?.hairColor ?? "brown");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
     setSaving(true);
     try {
-      await onComplete({ heroName: heroName.trim(), skinTone, hairStyle, hairColor, eyeColor });
+      await onComplete({ heroName: heroName.trim(), characterType, skinTone, hairColor });
     } finally {
       setSaving(false);
     }
@@ -53,13 +52,28 @@ export function CharacterCreationWizard({
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="h-5 w-5 text-[#A855F7]" />
           <h1 className="text-xl font-extrabold text-[#F8F7FC]">
-            {isLegacyWelcome ? "Das Heldensystem ist da!" : "Erschaffe deinen Helden"}
+            {isEditMode
+              ? "Charakterdarstellung ändern"
+              : isAppearanceUpgradeOnly
+                ? "Wähle das Aussehen deines Helden"
+                : isLegacyWelcome
+                  ? "Das Heldensystem ist da!"
+                  : "Erschaffe deinen Helden"}
           </h1>
         </div>
-        {isLegacyWelcome ? (
+        {isEditMode ? (
           <p className="text-sm text-[#C8C5D2] mb-5">
-            Du bist bereits Level {level}. Deshalb warten {level} Ausrüstungsbelohnungen auf dich. Gestalte zuerst dein Aussehen,
-            dann kannst du dein Haustier wählen und deine Belohnungen öffnen.
+            Ändert nur die Grafik. Level, XP, Gegenstände, Ausrüstung, Stärke, Haustier, Fleisch und Belohnungen bleiben unverändert.
+          </p>
+        ) : isAppearanceUpgradeOnly ? (
+          <p className="text-sm text-[#C8C5D2] mb-5">
+            Entscheide dich für eine männliche oder weibliche Charakterdarstellung. Deine Ausrüstung, dein Inventar, dein Haustier,
+            deine Stärke und deine Belohnungen bleiben vollständig erhalten.
+          </p>
+        ) : isLegacyWelcome ? (
+          <p className="text-sm text-[#C8C5D2] mb-5">
+            Du bist bereits Level {level}. Deshalb warten {level} Ausrüstungsbelohnungen auf dich. Gestalte zuerst dein Aussehen, dann
+            kannst du dein Haustier wählen und deine Belohnungen öffnen.
           </p>
         ) : (
           <p className="text-sm text-[#C8C5D2] mb-5">
@@ -69,15 +83,32 @@ export function CharacterCreationWizard({
 
         <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6">
           <div className="flex justify-center sm:justify-start">
-            <CharacterSprite
-              appearance={{ skinTone, hairStyle, hairColor, eyeColor }}
-              equipped={{}}
-              reducedMotion={reducedMotion}
-              className="w-36 h-48 sm:w-40 sm:h-56"
-            />
+            <CharacterSprite appearance={{ characterType, skinTone, hairColor }} equipped={{}} reducedMotion={reducedMotion} className="w-36 h-48 sm:w-40 sm:h-56" />
           </div>
 
           <div className="space-y-4">
+            <fieldset>
+              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Charaktertyp</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {(["MALE", "FEMALE"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setCharacterType(type)}
+                    aria-pressed={characterType === type}
+                    className={`relative rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                      characterType === type
+                        ? "border-[#A855F7] bg-[#A855F7]/10 text-[#D8B4FE] shadow-[0_0_16px_rgba(168,85,247,0.35)]"
+                        : "border-[#292936] text-[#C8C5D2] hover:border-[#3D2A5C]"
+                    }`}
+                  >
+                    {characterType === type && <Check className="h-3.5 w-3.5 absolute top-2 right-2" />}
+                    {type === "MALE" ? "Männlicher Held" : "Weibliche Heldin"}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
             <div>
               <label htmlFor="hero-name" className="block text-xs font-semibold text-[#C8C5D2] mb-1.5">
                 Name deines Helden (optional)
@@ -96,35 +127,17 @@ export function CharacterCreationWizard({
             <fieldset>
               <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Hautfarbe</legend>
               <div className="flex gap-2 flex-wrap">
-                {SKIN_TONES.map((c) => (
+                {SKIN_TONE_OPTIONS.map((opt) => (
                   <button
-                    key={c}
+                    key={opt.key}
                     type="button"
-                    onClick={() => setSkinTone(c)}
-                    aria-label={`Hautfarbe ${c} wählen`}
-                    aria-pressed={skinTone === c}
-                    style={{ backgroundColor: c }}
-                    className={`h-8 w-8 rounded-full border-2 transition-transform ${skinTone === c ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
+                    onClick={() => setSkinTone(opt.key)}
+                    aria-label={`Hautfarbe ${opt.label} wählen`}
+                    aria-pressed={skinTone === opt.key}
+                    title={opt.label}
+                    style={{ backgroundColor: opt.swatch }}
+                    className={`h-8 w-8 rounded-full border-2 transition-transform ${skinTone === opt.key ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
                   />
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Frisur</legend>
-              <div className="flex gap-1.5 flex-wrap">
-                {HAIR_STYLES.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setHairStyle(s.value)}
-                    aria-pressed={hairStyle === s.value}
-                    className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors ${
-                      hairStyle === s.value ? "border-[#A855F7] bg-[#A855F7]/15 text-[#D8B4FE]" : "border-[#292936] text-[#C8C5D2] hover:border-[#3D2A5C]"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
                 ))}
               </div>
             </fieldset>
@@ -132,32 +145,16 @@ export function CharacterCreationWizard({
             <fieldset>
               <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Haarfarbe</legend>
               <div className="flex gap-2 flex-wrap">
-                {HAIR_COLORS.map((c) => (
+                {HAIR_COLOR_OPTIONS.map((opt) => (
                   <button
-                    key={c}
+                    key={opt.key}
                     type="button"
-                    onClick={() => setHairColor(c)}
-                    aria-label={`Haarfarbe ${c} wählen`}
-                    aria-pressed={hairColor === c}
-                    style={{ backgroundColor: c }}
-                    className={`h-7 w-7 rounded-full border-2 transition-transform ${hairColor === c ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
-                  />
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Augenfarbe (optional)</legend>
-              <div className="flex gap-2 flex-wrap">
-                {EYE_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setEyeColor(c)}
-                    aria-label={`Augenfarbe ${c} wählen`}
-                    aria-pressed={eyeColor === c}
-                    style={{ backgroundColor: c }}
-                    className={`h-7 w-7 rounded-full border-2 transition-transform ${eyeColor === c ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
+                    onClick={() => setHairColor(opt.key)}
+                    aria-label={`Haarfarbe ${opt.label} wählen`}
+                    aria-pressed={hairColor === opt.key}
+                    title={opt.label}
+                    style={{ backgroundColor: opt.swatch }}
+                    className={`h-7 w-7 rounded-full border-2 transition-transform ${hairColor === opt.key ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
                   />
                 ))}
               </div>
@@ -165,9 +162,14 @@ export function CharacterCreationWizard({
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-end gap-2 mt-6">
+          {onCancel && (
+            <Button variant="secondary" onClick={onCancel} disabled={saving}>
+              Abbrechen
+            </Button>
+          )}
           <Button onClick={handleSubmit} loading={saving}>
-            Helden erschaffen
+            {isEditMode || isAppearanceUpgradeOnly ? "Aussehen speichern" : "Helden erschaffen"}
           </Button>
         </div>
       </div>
