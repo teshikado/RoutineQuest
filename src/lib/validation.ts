@@ -288,6 +288,7 @@ export const heroCharacterSchema = z.object({
   characterType: z.enum(["MALE", "FEMALE"]),
   skinTone: z.enum(["very-light", "light", "medium", "dark", "very-dark"]),
   hairColor: z.enum(["black", "brown", "blonde", "red", "gray", "purple"]),
+  hairStyle: z.enum(["kurz", "lang"]),
 });
 
 export const heroPetSelectSchema = z.object({

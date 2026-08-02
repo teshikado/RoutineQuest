@@ -4,7 +4,14 @@ import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CharacterSprite } from "./character-sprite";
-import { HAIR_COLOR_OPTIONS, SKIN_TONE_OPTIONS, type HairColorKey, type SkinToneKey } from "@/lib/hero-assets";
+import {
+  HAIR_COLOR_OPTIONS,
+  HAIR_STYLE_OPTIONS,
+  SKIN_TONE_OPTIONS,
+  type HairColorKey,
+  type HairStyleKey,
+  type SkinToneKey,
+} from "@/lib/hero-assets";
 import type { HeroCharacterType } from "@prisma/client";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -26,8 +33,14 @@ export function CharacterCreationWizard({
   isAppearanceUpgradeOnly: boolean;
   isEditMode?: boolean;
   level: number;
-  initial?: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey };
-  onComplete: (input: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey }) => Promise<void>;
+  initial?: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey; hairStyle: HairStyleKey };
+  onComplete: (input: {
+    heroName: string;
+    characterType: HeroCharacterType;
+    skinTone: SkinToneKey;
+    hairColor: HairColorKey;
+    hairStyle: HairStyleKey;
+  }) => Promise<void>;
   onCancel?: () => void;
 }) {
   const reducedMotion = usePrefersReducedMotion();
@@ -35,12 +48,13 @@ export function CharacterCreationWizard({
   const [characterType, setCharacterType] = useState<HeroCharacterType>(initial?.characterType ?? "MALE");
   const [skinTone, setSkinTone] = useState<SkinToneKey>(initial?.skinTone ?? "medium");
   const [hairColor, setHairColor] = useState<HairColorKey>(initial?.hairColor ?? "brown");
+  const [hairStyle, setHairStyle] = useState<HairStyleKey>(initial?.hairStyle ?? "kurz");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
     setSaving(true);
     try {
-      await onComplete({ heroName: heroName.trim(), characterType, skinTone, hairColor });
+      await onComplete({ heroName: heroName.trim(), characterType, skinTone, hairColor, hairStyle });
     } finally {
       setSaving(false);
     }
@@ -83,7 +97,7 @@ export function CharacterCreationWizard({
 
         <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6">
           <div className="flex justify-center sm:justify-start">
-            <CharacterSprite appearance={{ characterType, skinTone, hairColor }} equipped={{}} reducedMotion={reducedMotion} className="w-36 h-48 sm:w-40 sm:h-56" />
+            <CharacterSprite appearance={{ characterType, skinTone, hairColor, hairStyle }} equipped={{}} reducedMotion={reducedMotion} className="w-36 h-48 sm:w-40 sm:h-56" />
           </div>
 
           <div className="space-y-4">
@@ -156,6 +170,27 @@ export function CharacterCreationWizard({
                     style={{ backgroundColor: opt.swatch }}
                     className={`h-7 w-7 rounded-full border-2 transition-transform ${hairColor === opt.key ? "border-[#A855F7] scale-110" : "border-[#292936]"}`}
                   />
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Frisur</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {HAIR_STYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setHairStyle(opt.key)}
+                    aria-pressed={hairStyle === opt.key}
+                    className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                      hairStyle === opt.key
+                        ? "border-[#A855F7] bg-[#A855F7]/10 text-[#D8B4FE]"
+                        : "border-[#292936] text-[#C8C5D2] hover:border-[#3D2A5C]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
               </div>
             </fieldset>

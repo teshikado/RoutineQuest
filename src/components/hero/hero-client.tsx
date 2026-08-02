@@ -7,7 +7,7 @@ import type { EquipmentSlot, HeroCharacterType, PetSpecies } from "@prisma/clien
 import { Sparkles, Shield, Sword, Gift, History, PawPrint, Drumstick, User, ChevronRight, Pencil } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { EQUIPMENT_SLOT_META, EQUIPMENT_SLOT_ORDER, PET_SPECIES_META, PET_STAGE_META, RARITY_META } from "@/lib/hero-constants";
-import type { HairColorKey, SkinToneKey } from "@/lib/hero-assets";
+import type { HairColorKey, HairStyleKey, SkinToneKey } from "@/lib/hero-assets";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { CharacterSprite } from "./character-sprite";
 import { EquipmentSprite } from "./equipment-sprite";
@@ -63,7 +63,13 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     return map;
   }, [equippedItems]);
 
-  async function handleCompleteCharacter(input: { heroName: string; characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey }) {
+  async function handleCompleteCharacter(input: {
+    heroName: string;
+    characterType: HeroCharacterType;
+    skinTone: SkinToneKey;
+    hairColor: HairColorKey;
+    hairStyle: HairStyleKey;
+  }) {
     try {
       await postJson("/api/hero/character", input);
       setEditingAppearance(false);
@@ -168,6 +174,9 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     characterType: data.profile.characterType ?? "MALE",
     skinTone: data.profile.skinTone as SkinToneKey,
     hairColor: data.profile.hairColor as HairColorKey,
+    // Pre-existing profiles carry the old "natuerlich" default from before the "lang" style
+    // existed -- treat anything that isn't a known key as "kurz" rather than erroring.
+    hairStyle: (data.profile.hairStyle === "lang" ? "lang" : "kurz") as HairStyleKey,
   };
   const equippedForSprite = Object.fromEntries(
     Object.entries(equippedBySlot).map(([slot, item]) => [slot, { slot: item!.slot, rarity: item!.rarity, weaponType: item!.weaponType }])
@@ -242,7 +251,18 @@ export function HeroClient({ data }: { data: HeroPageData }) {
         >
           {activeTab === "character" && (
             <div className="rounded-2xl border border-[#292936] bg-[#111118] p-6 flex flex-col items-center gap-4">
-              <CharacterSprite appearance={appearance} equipped={equippedForSprite} reducedMotion={reducedMotion} className="w-48 h-64" />
+              <div className="flex items-end justify-center gap-2">
+                <CharacterSprite appearance={appearance} equipped={equippedForSprite} reducedMotion={reducedMotion} className="w-48 h-64" />
+                {data.pet && data.stage && (
+                  <PetSprite
+                    species={data.pet.species}
+                    stage={data.stage}
+                    withPodium
+                    className="w-24 h-28 mb-2"
+                    title={`${PET_SPECIES_META[data.pet.species].label}, Stufe ${data.stage}`}
+                  />
+                )}
+              </div>
               <div className="text-center">
                 <div className="text-lg font-extrabold text-[#F8F7FC]">{data.profile.heroName || "Namenloser Held"}</div>
                 <div className="text-sm text-[#C8C5D2]">Level {data.level}</div>
@@ -382,7 +402,7 @@ function PetEvolutionModal({
         className="w-full max-w-sm rounded-2xl border border-[#A855F7] bg-[#111118] p-6 text-center shadow-[var(--shadow-purple-lg)]"
       >
         <div className="text-sm font-extrabold text-[#D8B4FE] mb-2">Dein Haustier entwickelt sich!</div>
-        <PetSprite species={species} stage={stage} className="w-48 h-36 mx-auto mb-3" title={PET_SPECIES_META[species].label} />
+        <PetSprite species={species} stage={stage} withPodium className="w-48 h-40 mx-auto mb-3" title={PET_SPECIES_META[species].label} />
         <div className="text-lg font-extrabold text-[#F8F7FC]">
           {PET_SPECIES_META[species].label} hat {PET_STAGE_META[stage].label} erreicht.
         </div>

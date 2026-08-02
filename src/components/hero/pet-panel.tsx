@@ -41,7 +41,7 @@ export function PetPanel({
       <Card>
         <h2 className="font-bold text-[#F8F7FC] mb-4">Haustier</h2>
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          <PetSprite species={pet.species} stage={stage} className="w-40 h-32 shrink-0" title={`${meta.label}, Stufe ${stage}`} />
+          <PetSprite species={pet.species} stage={stage} withPodium className="w-44 h-40 shrink-0" title={`${meta.label}, Stufe ${stage}`} />
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-lg font-extrabold text-[#F8F7FC]">{meta.label}</h3>
@@ -74,7 +74,7 @@ export function PetPanel({
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 mb-4">
-        <PetSprite species={previewSpecies} stage={petStageForLevel(level)} className="w-40 h-32 mx-auto sm:mx-0" title={meta.label} />
+        <PetSprite species={previewSpecies} stage={petStageForLevel(level)} withPodium className="w-44 h-40 mx-auto sm:mx-0" title={meta.label} />
         <div className="space-y-1.5">
           <h3 className="text-lg font-extrabold text-[#F8F7FC]">{meta.label}</h3>
           <p className="text-sm text-[#C8C5D2]">{meta.description}</p>

@@ -1,5 +1,5 @@
 import type { EquipmentSlot, HeroCharacterType, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
-import type { HairColorKey, SkinToneKey } from "@/lib/hero-assets";
+import type { HairColorKey, HairStyleKey, SkinToneKey } from "@/lib/hero-assets";
 
 export type HeroItemFields = {
   id: string;
@@ -44,11 +44,12 @@ export type HeroProfileData = {
   characterType: HeroCharacterType | null;
   skinTone: string;
   hairColor: string;
+  hairStyle: string;
   meatBalance: number;
   legacyMigrationCompletedAt: string | Date | null;
 };
 
-export type HeroAppearance = { characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey };
+export type HeroAppearance = { characterType: HeroCharacterType; skinTone: SkinToneKey; hairColor: HairColorKey; hairStyle: HairStyleKey };
 
 export type HeroPageData = {
   level: number;

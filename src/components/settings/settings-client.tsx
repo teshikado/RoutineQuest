@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Download } from "lucide-react";
 import { Card, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -260,6 +261,18 @@ export function SettingsClient({ appVersion }: { appVersion: string }) {
           wenn du einen Zeitblock ausdrücklich mit einer Gruppenroutine verbindest, fließt dessen Erledigung wie
           gewohnt in den gemeinsamen Gruppenfortschritt ein — dein Zeitplan selbst bleibt dabei privat. Tagesplan-Daten
           werden wie deine übrigen Kontodaten gespeichert und bei einer Kontolöschung mitgelöscht.
+        </CardSubtitle>
+        <CardSubtitle className="mt-3">
+          Dein Held (Charaktertyp, Heldenname, Aussehen, Inventar, Ausrüstung, Haustier samt Entwicklungsstufe,
+          Fleischbestand, Fleischtransaktionen, Fütterungsverlauf und Levelbelohnungen) ist ebenfalls ausschließlich
+          für dich sichtbar und wird nicht automatisch mit anderen Nutzern oder Gruppenmitgliedern geteilt.
+        </CardSubtitle>
+        <CardSubtitle className="mt-3">
+          Die vollständige Datenschutzerklärung findest du unter{" "}
+          <Link href="/datenschutz" className="text-[#A855F7] font-semibold hover:underline">
+            /datenschutz
+          </Link>
+          .
         </CardSubtitle>
       </Card>
     </div>

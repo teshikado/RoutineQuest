@@ -6,12 +6,22 @@ import { authConfig } from "@/lib/auth.config";
 // bundle never pulls in Prisma/bcrypt, which cannot run in the Edge runtime.
 const { auth } = NextAuth(authConfig);
 
+// Auth pages -- only meant for logged-out visitors, so a logged-in user gets bounced to the
+// dashboard instead (see below).
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
+// Legal pages -- must stay reachable regardless of login state (a prospective user reads the
+// privacy policy before registering; an existing user reaches it from Settings).
+const ALWAYS_PUBLIC_PATHS = ["/datenschutz", "/impressum"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isAlwaysPublic = ALWAYS_PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  if (isAlwaysPublic) {
+    return NextResponse.next();
+  }
 
   if (!isLoggedIn && !isPublic && pathname !== "/") {
     const url = new URL("/login", req.nextUrl.origin);

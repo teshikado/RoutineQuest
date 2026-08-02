@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { DownloadAppSection } from "@/components/download-app-card";
 import { Reveal } from "@/components/ui/reveal";
 
@@ -45,6 +46,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <Reveal delay={0.16} className="relative mt-6">
         <DownloadAppSection />
       </Reveal>
+
+      <div className="relative mt-6 flex items-center gap-4 text-xs text-[#5F5B68]">
+        <Link href="/datenschutz" className="hover:text-[#A855F7] hover:underline">
+          Datenschutz
+        </Link>
+        <Link href="/impressum" className="hover:text-[#A855F7] hover:underline">
+          Impressum
+        </Link>
+      </div>
     </div>
   );
 }

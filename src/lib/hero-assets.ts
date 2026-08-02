@@ -26,16 +26,25 @@ export const HAIR_COLOR_OPTIONS: { key: HairColorKey; label: string; swatch: str
   { key: "purple", label: "Lila", swatch: "#824EB2" },
 ];
 
-/** The provided character sheet contains exactly one usable pose/outfit per gender -- see
- * the Abschlussbericht for why (the sheet doesn't include multiple distinct hairstyles), so
- * there is honestly only one "Frisur" per gender rather than the several originally
- * envisioned. Kept as a keyed lookup (not a bare string) so a second style can be added
- * later without changing every call site. */
-export type HairStyleKey = "natuerlich";
-export const HAIR_STYLE_OPTIONS: { key: HairStyleKey; label: string }[] = [{ key: "natuerlich", label: "Natürlich" }];
+/** The provided character sheet contains exactly one drawn hairstyle per gender -- "lang" is
+ * not a second hand-drawn style but a derived variant (the source hair strands extruded
+ * downward past the shoulders, see generate-long-hair.cjs in the Abschlussbericht), which is
+ * why there are two options here rather than the ~8 originally envisioned. Kept as a keyed
+ * lookup (not a bare string) so more styles can be added later without changing call sites. */
+export type HairStyleKey = "kurz" | "lang";
+export const HAIR_STYLE_OPTIONS: { key: HairStyleKey; label: string }[] = [
+  { key: "kurz", label: "Kurz" },
+  { key: "lang", label: "Lang" },
+];
 
-export function characterVariantSrc(gender: HeroCharacterTypeLower, skinTone: SkinToneKey, hairColor: HairColorKey): string {
-  return `/hero/characters/${gender}/variants/${skinTone}--${hairColor}.png`;
+export function characterVariantSrc(
+  gender: HeroCharacterTypeLower,
+  skinTone: SkinToneKey,
+  hairColor: HairColorKey,
+  hairStyle: HairStyleKey = "kurz"
+): string {
+  const dir = hairStyle === "lang" ? "variants-long" : "variants";
+  return `/hero/characters/${gender}/${dir}/${skinTone}--${hairColor}.png`;
 }
 
 export function characterBaseSrc(gender: HeroCharacterTypeLower, angle: "front" | "side" | "back" = "front"): string {

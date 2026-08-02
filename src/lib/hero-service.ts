@@ -173,7 +173,7 @@ export async function ensureRewardsUpToLevel(userId: string, currentLevel: numbe
  * fine since it only ever gates whether the creation wizard shows, not appearance data. */
 export async function completeCharacterSetup(
   userId: string,
-  input: { heroName: string | null; characterType: HeroCharacterType; skinTone: string; hairColor: string }
+  input: { heroName: string | null; characterType: HeroCharacterType; skinTone: string; hairColor: string; hairStyle: string }
 ) {
   return prisma.heroProfile.upsert({
     where: { userId },
