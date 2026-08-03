@@ -28,7 +28,7 @@ import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 /** Neutral preview appearance -- the set preview is about the armor, not the viewer's own
  * cosmetic choices, so both preview figures use the same fixed skin/hair rather than
  * threading the real profile through just for this. */
-const PREVIEW_APPEARANCE = { skinTone: "medium" as const, hairColor: "brown" as const, hairStyle: "kurz" as const };
+const PREVIEW_APPEARANCE = { skinTone: "medium" as const, hairColor: "brown" as const, hairStyle: "short-classic" as const };
 
 function SetPreviewModal({ setKey, ownedSlots, onClose }: { setKey: ArmorSetKey; ownedSlots: Set<EquipmentSlot>; onClose: () => void }) {
   const reducedMotion = usePrefersReducedMotion();

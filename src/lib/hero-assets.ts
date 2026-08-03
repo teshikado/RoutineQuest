@@ -1,5 +1,15 @@
 import type { EquipmentSlot, ItemRarity, PetSpecies, WeaponType } from "@prisma/client";
 import { LEGENDARY_STYLE_META, type LegendaryStyleKey } from "./hero-constants";
+import {
+  BODY_BUILD_OPTIONS,
+  HAIR_STYLE_META,
+  HAIR_STYLE_KEY_ORDER,
+  normalizeHairStyle,
+  type BodyBuildKey,
+  type HairStyleKey,
+} from "./hero-render-config";
+
+export { BODY_BUILD_OPTIONS, normalizeHairStyle, type BodyBuildKey, type HairStyleKey };
 
 /** Single source of truth for every hero-system image path -- nothing else in the codebase
  * should hard-code a `/hero/...` string. All assets were extracted from the five source
@@ -32,48 +42,29 @@ export const HAIR_COLOR_OPTIONS: { key: HairColorKey; label: string; swatch: str
   { key: "purple", label: "Lila", swatch: "#824EB2" },
 ];
 
-/** The provided character sheet contains exactly one drawn hairstyle per gender -- "lang" is
- * not a second hand-drawn style but a derived variant (twin tapered locks extruded from the
- * existing hair mass down past the shoulders, see generate-long-hair.cjs in the
- * Abschlussbericht), which is why there are two options here rather than the ~8 originally
- * envisioned. Kept as a keyed lookup (not a bare string) so more styles can be added later
- * without changing call sites. */
-export type HairStyleKey = "kurz" | "lang";
-export const HAIR_STYLE_OPTIONS: { key: HairStyleKey; label: string }[] = [
-  { key: "kurz", label: "Kurz" },
-  { key: "lang", label: "Lang" },
-];
+/** Eight real, independently-silhouetted hairstyles rendered as their own overlay layer on top
+ * of the (now hair-free) base body -- see scripts/hero-art/generate-hairstyles.ts and
+ * hero-render-config.ts. Replaces the old two-option "kurz"/"lang" system where "lang" was the
+ * only non-baked-in variant; those two legacy values still resolve correctly via
+ * normalizeHairStyle for any HeroProfile row saved before this change. */
+export const HAIR_STYLE_OPTIONS: { key: HairStyleKey; label: string; category: "kurz" | "lang" }[] = HAIR_STYLE_KEY_ORDER.map((key) => ({
+  key,
+  label: HAIR_STYLE_META[key].label,
+  category: HAIR_STYLE_META[key].category,
+}));
 
-/** There is only one drawn base body per gender (a single flat sprite, not body-part layers),
- * and every armor piece is anchored to it via fixed percentage zones (see ARMOR_ZONES in
- * character-sprite.tsx) -- so a body build can only safely change the *scale* of the whole
- * character (base + armor together, so armor never drifts out of alignment), not reshape
- * individual body parts (shoulders/waist/arms independently) without new source art. Purely
- * cosmetic either way: never affects level/XP/items/equipment/strength/pet/rewards. */
-export type BodyBuildKey = "duenn" | "normal" | "muskuloes" | "kraeftig" | "stabil";
-export const BODY_BUILD_OPTIONS: { key: BodyBuildKey; label: string; description: string; scaleX: number; scaleY: number }[] = [
-  { key: "duenn", label: "Dünn", description: "Schlank und leicht", scaleX: 0.9, scaleY: 1.03 },
-  { key: "normal", label: "Normal", description: "Ausgewogene Statur", scaleX: 1, scaleY: 1 },
-  { key: "muskuloes", label: "Muskulös", description: "Athletisch und definiert", scaleX: 1.07, scaleY: 0.99 },
-  { key: "kraeftig", label: "Kräftig", description: "Breit und wuchtig", scaleX: 1.14, scaleY: 0.97 },
-  { key: "stabil", label: "Stabil", description: "Fülliger und bodenständig", scaleX: 1.12, scaleY: 1 },
-];
-export const BODY_BUILD_META: Record<BodyBuildKey, { label: string; scaleX: number; scaleY: number }> = Object.fromEntries(
-  BODY_BUILD_OPTIONS.map((o) => [o.key, { label: o.label, scaleX: o.scaleX, scaleY: o.scaleY }])
-) as Record<BodyBuildKey, { label: string; scaleX: number; scaleY: number }>;
-
-export function characterVariantSrc(
-  gender: HeroCharacterTypeLower,
-  skinTone: SkinToneKey,
-  hairColor: HairColorKey,
-  hairStyle: HairStyleKey = "kurz"
-): string {
-  const dir = hairStyle === "lang" ? "variants-long" : "variants";
-  return `/hero/characters/${gender}/${dir}/${skinTone}--${hairColor}.png`;
+/** Base body art, hair-free, reshaped per build (see scripts/hero-art/generate-bodies.ts) --
+ * replaces the old single flat sprite + CSS `transform: scale()` approach: every body build is
+ * now a genuinely different silhouette baked into its own PNG, not a stretched copy. */
+export function characterBodySrc(gender: HeroCharacterTypeLower, bodyBuild: BodyBuildKey, skinTone: SkinToneKey): string {
+  return `/hero/characters/${gender}/body/${bodyBuild}/${skinTone}.png`;
 }
 
-export function characterBaseSrc(gender: HeroCharacterTypeLower, angle: "front" | "side" | "back" = "front"): string {
-  return `/hero/characters/${gender}/${angle}.png`;
+/** Hair overlay layer, same fixed frame as the body so it can be composited directly on top of
+ * it at 0/0/100%/100% (see LAYER_ORDER in hero-render-config.ts). Accepts legacy "kurz"/"lang"
+ * values too (normalized internally) so old HeroProfile rows keep rendering correctly. */
+export function hairOverlaySrc(gender: HeroCharacterTypeLower, hairStyle: string, hairColor: HairColorKey): string {
+  return `/hero/hairstyles/${normalizeHairStyle(hairStyle)}/${gender}/${hairColor}.png`;
 }
 
 const ARMOR_SLOT_DIR: Record<Exclude<EquipmentSlot, "WEAPON">, string> = {

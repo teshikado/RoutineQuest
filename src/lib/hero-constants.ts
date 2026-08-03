@@ -56,13 +56,14 @@ export type ArmorSetKey =
   | "shadow-blade"
   | "sky-warden"
   | "sun-king"
-  | "star-breaker";
+  | "star-breaker"
+  | "samurai";
 
 export const ARMOR_SET_KEYS_BY_RARITY: Record<ItemRarity, ArmorSetKey[]> = {
   COMMON: ["iron-guard", "wander-hunter", "north-fur"],
   RARE: ["sapphire-guard", "arcane-keeper", "night-runner"],
   EPIC: ["void-guard", "rune-lord", "shadow-blade"],
-  LEGENDARY: ["sky-warden", "sun-king", "star-breaker"],
+  LEGENDARY: ["sky-warden", "sun-king", "star-breaker", "samurai"],
 };
 
 export const ARMOR_SET_META: Record<ArmorSetKey, { label: string; genitive: string; rarity: ItemRarity; theme: string }> = {
@@ -78,21 +79,21 @@ export const ARMOR_SET_META: Record<ArmorSetKey, { label: string; genitive: stri
   "sky-warden": { label: "Himmelswächter", genitive: "des Himmelswächters", rarity: "LEGENDARY", theme: "Geflügelte weiß-goldene Rüstung mit Blau." },
   "sun-king": { label: "Sonnenkönig", genitive: "des Sonnenkönigs", rarity: "LEGENDARY", theme: "Schwere königliche Goldrüstung in Gold, Dunkelblau und Weiß." },
   "star-breaker": { label: "Sternenbrecher", genitive: "des Sternenbrechers", rarity: "LEGENDARY", theme: "Moderne goldene Energierüstung mit leuchtendem Cyan." },
+  "samurai": { label: "Samurai", genitive: "des Samurai", rarity: "LEGENDARY", theme: "Lackierte Rüstung in Schwarz, Dunkelrot und Gold mit violettem Kristall und Kabuto-Hörnern." },
 };
 
 export const ARMOR_SET_KEY_ORDER: ArmorSetKey[] = Object.keys(ARMOR_SET_META) as ArmorSetKey[];
 
 // ---------- Legendary styles ----------
-// A purely cosmetic reskin layer for LEGENDARY armor pieces: independent of which of the 3
-// legendary sets an item actually rolled as (armorSetKey), a player can choose to *display* it
-// as any of these 3 styles instead. Deliberately only 3, not the 4 originally requested
-// (Samurai, Himmels-Paladin, Schattenfürst, Drachenkönig) -- there is no real Samurai-themed
-// armor art in this project (no East-Asian kabuto-style helm exists anywhere in the asset set)
-// and this project has no illustration/generation capability, only image manipulation, so a
-// 4th style cannot be produced without fabricating something. The 3 styles below reuse the
-// existing, already visually distinct legendary set art under themed names that reasonably
-// match 3 of the 4 requested concepts.
-export type LegendaryStyleKey = "himmels-paladin" | "schattenfuerst" | "drachenkoenig";
+// A purely cosmetic reskin layer for LEGENDARY armor pieces: independent of which legendary set
+// an item actually rolled as (armorSetKey), a player can choose to *display* it as any of these
+// 4 styles instead. The first 3 reuse the existing, already visually distinct hand-painted
+// legendary set art. "samurai" is new -- see scripts/hero-art/generate-samurai.ts -- built
+// procedurally (flat-shaded silhouettes with the requested Schwarz/Dunkelrot/Lila/Gold palette,
+// kabuto-style horned helm, lamellar chest, hakama-style pants) since there's no illustration
+// tool available to hand-paint it to the same fidelity as the other 3 sets; see the
+// Abschlussbericht for that quality gap.
+export type LegendaryStyleKey = "himmels-paladin" | "schattenfuerst" | "drachenkoenig" | "samurai";
 
 export const LEGENDARY_STYLE_META: Record<LegendaryStyleKey, { label: string; description: string; setKey: ArmorSetKey }> = {
   "himmels-paladin": {
@@ -109,6 +110,11 @@ export const LEGENDARY_STYLE_META: Record<LegendaryStyleKey, { label: string; de
     label: "Drachenkönig",
     description: "Schwere, königliche Rüstung in Gold und Dunkelblau -- mächtig und herrschaftlich.",
     setKey: "sun-king",
+  },
+  "samurai": {
+    label: "Samurai",
+    description: "Lackierte Kriegerrüstung in Schwarz, Dunkelrot und Gold mit violettem Kristall und gehörntem Kabuto-Helm.",
+    setKey: "samurai",
   },
 };
 

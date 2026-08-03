@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CharacterSprite, type EquippedPiece } from "./character-sprite";
@@ -60,11 +60,17 @@ export function CharacterCreationWizard({
   const [characterType, setCharacterType] = useState<HeroCharacterType>(initial?.characterType ?? "MALE");
   const [skinTone, setSkinTone] = useState<SkinToneKey>(initial?.skinTone ?? "medium");
   const [hairColor, setHairColor] = useState<HairColorKey>(initial?.hairColor ?? "brown");
-  const [hairStyle, setHairStyle] = useState<HairStyleKey>(initial?.hairStyle ?? "kurz");
+  const [hairStyle, setHairStyle] = useState<HairStyleKey>(initial?.hairStyle ?? "short-classic");
   const [bodyBuild, setBodyBuild] = useState<BodyBuildKey>(initial?.bodyBuild ?? "normal");
   const [saving, setSaving] = useState(false);
+  const [hairFilter, setHairFilter] = useState<"alle" | "kurz" | "lang">("alle");
   const hasEquipped = !!equippedForPreview && Object.keys(equippedForPreview).length > 0;
   const [showArmorPreview, setShowArmorPreview] = useState(false);
+
+  const visibleHairStyles = useMemo(
+    () => (hairFilter === "alle" ? HAIR_STYLE_OPTIONS : HAIR_STYLE_OPTIONS.filter((o) => o.category === hairFilter)),
+    [hairFilter]
+  );
 
   const dirty = !!initial && (
     heroName !== initial.heroName ||
@@ -234,9 +240,24 @@ export function CharacterCreationWizard({
             </fieldset>
 
             <fieldset>
-              <legend className="text-xs font-semibold text-[#C8C5D2] mb-1.5">Frisur</legend>
+              <div className="flex items-center justify-between mb-1.5">
+                <legend className="text-xs font-semibold text-[#C8C5D2]">Frisur</legend>
+                <div className="flex gap-1 rounded-lg bg-[#171720] border border-[#292936] p-0.5 text-[10px] font-semibold">
+                  {(["alle", "kurz", "lang"] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setHairFilter(f)}
+                      aria-pressed={hairFilter === f}
+                      className={`px-2 py-0.5 rounded-md transition-colors ${hairFilter === f ? "bg-[#A855F7] text-white" : "text-[#8D8998] hover:text-[#C8C5D2]"}`}
+                    >
+                      {f === "alle" ? "Alle" : f === "kurz" ? "Kurz" : "Lang"}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
-                {HAIR_STYLE_OPTIONS.map((opt) => (
+                {visibleHairStyles.map((opt) => (
                   <button
                     key={opt.key}
                     type="button"

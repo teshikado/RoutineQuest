@@ -1,6 +1,6 @@
 {
   "name": "routinequest",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "hero-art:generate": "tsx scripts/hero-art/generate-bodies.ts && tsx scripts/hero-art/generate-hairstyles.ts && tsx scripts/hero-art/generate-samurai.ts",
+    "hero-art:validate": "tsx scripts/hero-art/validate-assets.ts",
     "electron:dev": "cross-env APP_URL=http://localhost:3000 electron .",
     "electron": "electron .",
     "icon": "node build/generate-icon.js",
@@ -51,6 +53,7 @@
     "png-to-ico": "^3.0.2",
     "png2icons": "^2.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.5",
     "typescript": "^5"
   },
   "allowScripts": {
@@ -59,7 +62,8 @@
     "@prisma/client@6.19.3": true,
     "@prisma/engines@6.19.3": true,
     "prisma@6.19.3": true,
-    "electron-winstaller@5.4.0": true
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.28.1": true
   },
   "build": {
     "appId": "app.routinequest.desktop",

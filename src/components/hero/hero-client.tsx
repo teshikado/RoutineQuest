@@ -8,6 +8,7 @@ import { Sparkles, Shield, Sword, Gift, History, PawPrint, Drumstick, User, Chev
 import { useToast } from "@/components/toast";
 import { EQUIPMENT_SLOT_META, EQUIPMENT_SLOT_ORDER, PET_SPECIES_META, PET_STAGE_META, RARITY_META } from "@/lib/hero-constants";
 import type { BodyBuildKey, HairColorKey, HairStyleKey, SkinToneKey } from "@/lib/hero-assets";
+import { normalizeHairStyle } from "@/lib/hero-assets";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { CharacterSprite } from "./character-sprite";
 import { EquipmentSprite } from "./equipment-sprite";
@@ -216,9 +217,9 @@ export function HeroClient({ data }: { data: HeroPageData }) {
     characterType: data.profile.characterType ?? "MALE",
     skinTone: data.profile.skinTone as SkinToneKey,
     hairColor: data.profile.hairColor as HairColorKey,
-    // Pre-existing profiles carry the old "natuerlich" default from before the "lang" style
-    // existed -- treat anything that isn't a known key as "kurz" rather than erroring.
-    hairStyle: (data.profile.hairStyle === "lang" ? "lang" : "kurz") as HairStyleKey,
+    // Pre-existing profiles carry legacy values ("natuerlich", "kurz", "lang") from before the
+    // 8-style system existed -- normalizeHairStyle maps all of them to a concrete style key.
+    hairStyle: normalizeHairStyle(data.profile.hairStyle),
     bodyBuild: (data.profile.bodyBuild as BodyBuildKey) ?? "normal",
   };
   const equippedForSprite = Object.fromEntries(
