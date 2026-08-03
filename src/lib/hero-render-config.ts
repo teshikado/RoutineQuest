@@ -43,13 +43,26 @@ export const FULL_BLEED_ZONE: Zone = { top: "0%", left: "0%", width: "100%", hei
  * Weapon zones are keyed by type (not a single shared box) since their natural art aspect
  * ratios vary hugely, and are anchored near where the character's hand hangs at its side
  * (~72% across, ~58% down) so the hilt reads as gripped rather than the blade floating in
- * empty space beside the body. */
+ * empty space beside the body.
+ *
+ * Sizes below were widened (dagger shrunk, greatsword/katana/spear grown) from an earlier pass
+ * that sized every type's box about the same -- the underlying item-icon art is a set of
+ * inventory cards (deliberately normalized to a similar canvas footprint regardless of the
+ * weapon's fictional size, same convention as any RPG item-icon grid; measured: trimmed content
+ * diagonal ranges only 209-250px across all 5 types), so fitting them into similarly-sized
+ * on-body boxes made a dagger and a greatsword read as almost the same size on the character --
+ * failing "Dolch deutlich kleiner" / "Großschwert schwer". Each box below keeps its previous
+ * center point (so the grip position doesn't shift) but scales its footprint by an explicit
+ * factor: dagger x0.7, katana/spear x1.08, greatsword x1.3, sword unchanged -- so the size
+ * hierarchy is guaranteed by this config instead of depending on how a given icon happens to
+ * be cropped. Actual on-body rendered size (accounting for each icon's own aspect within its
+ * box) was verified numerically, not just eyeballed -- see the Abschlussbericht. */
 export const WEAPON_ZONES: Record<WeaponType, Zone> = {
-  KATANA: { top: "40%", left: "52%", width: "56%", height: "32%" },
+  KATANA: { top: "39%", left: "50%", width: "60%", height: "35%" },
   SWORD: { top: "30%", left: "60%", width: "42%", height: "50%" },
-  DAGGER: { top: "40%", left: "62%", width: "36%", height: "32%" },
-  GREATSWORD: { top: "20%", left: "56%", width: "50%", height: "58%" },
-  SPEAR: { top: "8%", left: "54%", width: "48%", height: "80%" },
+  DAGGER: { top: "45%", left: "67%", width: "25%", height: "22%" },
+  GREATSWORD: { top: "11%", left: "49%", width: "65%", height: "76%" },
+  SPEAR: { top: "5%", left: "52%", width: "52%", height: "86%" },
 };
 
 /** Small hand-sprite box drawn over each weapon type's hilt (see hero-assets.ts handGripSrc and
