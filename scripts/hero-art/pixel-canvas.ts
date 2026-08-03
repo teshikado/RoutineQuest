@@ -27,6 +27,12 @@ export function cloneCanvas(c: Canvas): Canvas {
   return { width: c.width, height: c.height, data: new Uint8ClampedArray(c.data) };
 }
 
+export function cropCanvas(c: Canvas, x0: number, y0: number, w: number, h: number): Canvas {
+  const out = createCanvas(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) setPixel(out, x, y, getPixel(c, x0 + x, y0 + y));
+  return out;
+}
+
 export function inBounds(c: Canvas, x: number, y: number): boolean {
   return x >= 0 && y >= 0 && x < c.width && y < c.height;
 }
@@ -252,6 +258,81 @@ export function rowReshapeClamped(src: Canvas, centerX: number, rowScale: (t: nu
     }
   }
   return out;
+}
+
+/** Background matting via adaptive flood fill from a set of seed points (normally the four
+ * corners of a crop window, which are reliably background). Unlike a single fixed seed-color
+ * threshold, each newly-accepted pixel is compared against the *local* already-accepted
+ * neighbor average (not the original seed color) -- so a slow gradient/vignette background is
+ * still walked correctly, while the creature's hard silhouette edge (a sharp jump vs. its
+ * neighbors) stops the fill. Returns a boolean mask, true = background. */
+export function floodFillBackground(c: Canvas, seeds: [number, number][], threshold = 22): boolean[] {
+  const w = c.width, h = c.height;
+  const mask = new Array(w * h).fill(false);
+  const visited = new Array(w * h).fill(false);
+  const queue: [number, number][] = [];
+  for (const [sx, sy] of seeds) {
+    const idx = sy * w + sx;
+    if (!visited[idx]) {
+      visited[idx] = true;
+      mask[idx] = true;
+      queue.push([sx, sy]);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const [x, y] = queue[head++];
+    const [r, g, b] = getPixel(c, x, y);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const nidx = ny * w + nx;
+      if (visited[nidx]) continue;
+      const [nr, ng, nb] = getPixel(c, nx, ny);
+      const dist = Math.abs(nr - r) + Math.abs(ng - g) + Math.abs(nb - b);
+      if (dist <= threshold) {
+        visited[nidx] = true;
+        mask[nidx] = true;
+        queue.push([nx, ny]);
+      } else {
+        visited[nidx] = true; // still mark visited so it isn't re-queued, but not background
+      }
+    }
+  }
+  return mask;
+}
+
+/** 4-connected components over "true" cells of a boolean mask (e.g. the pixels a background
+ * flood-fill did NOT reach). Used to separate the intended creature from a disconnected
+ * fragment of a neighboring grid cell that a generously-padded crop window picked up. */
+export function connectedComponents(mask: boolean[], width: number, height: number): { pixels: [number, number][] }[] {
+  const visited = new Array(mask.length).fill(false);
+  const components: { pixels: [number, number][] }[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!mask[idx] || visited[idx]) continue;
+      const pixels: [number, number][] = [];
+      const queue: [number, number][] = [[x, y]];
+      visited[idx] = true;
+      let head = 0;
+      while (head < queue.length) {
+        const [cx, cy] = queue[head++];
+        pixels.push([cx, cy]);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const nidx = ny * width + nx;
+          if (mask[nidx] && !visited[nidx]) {
+            visited[nidx] = true;
+            queue.push([nx, ny]);
+          }
+        }
+      }
+      components.push({ pixels });
+    }
+  }
+  return components;
 }
 
 export function findOpaqueBoundsRow(c: Canvas, y: number): [number, number] | null {

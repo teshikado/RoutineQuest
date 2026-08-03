@@ -30,12 +30,29 @@ export const FULL_BLEED_ZONE: Zone = { top: "0%", left: "0%", width: "100%", hei
 
 /** Where each armor item's own art is overlaid on the base character, as a percentage box of
  * the character's frame -- measured directly against the base sprite's body landmarks (head
- * ends ~41% down, torso/waist ~41-61%, hips-to-ankle ~56-88%, feet ~84-97%). */
+ * ends ~41% down, torso/waist ~41-61%, hips-to-ankle ~56-88%, feet ~84-97%).
+ *
+ * CHEST/PANTS/SHOES height was widened from the original zones in this pass -- every armor-set
+ * icon (chest/pants/shoes across all 12 sets) is a *portrait*-oriented crop (width:height ratio
+ * roughly 0.6-0.95), but the old zone boxes were *landscape* (wider than tall). Since the art is
+ * placed with `object-contain` (preserve aspect ratio, fit within the box), a landscape box
+ * around portrait art is always height-constrained: the icon renders at whatever width its own
+ * aspect ratio implies at that height, leaving the rest of the box's width as empty transparent
+ * margin -- which is what actually caused the "armor doesn't reach the shoulders/sides, bare
+ * skin gap on both flanks" look reported across every body build (not particular to one, since
+ * the geometry mismatch is the same for all of them; wider builds only made the *already
+ * present* gap more visible). CHEST's zone box is now close to the icon's own aspect ratio,
+ * verified by direct pixel composition (not just visual guessing) against sky-warden on the
+ * dünn/kräftig/stabil builds -- see the Abschlussbericht. PANTS/SHOES were widened by the same
+ * logic but are capped by how much vertical room exists before hitting the neighboring zone
+ * (waist/knee for pants, the canvas bottom for shoes), so a smaller residual gap remains on the
+ * widest builds -- fully closing it would need the icon art itself redrawn wider, which is out
+ * of scope (see Abschlussbericht for that boundary). */
 export const ARMOR_ZONES: Record<Exclude<EquipmentSlot, "WEAPON">, Zone> = {
   HELMET: { top: "3%", left: "19%", width: "62%", height: "33%" },
-  CHEST: { top: "33%", left: "9%", width: "82%", height: "32%" },
-  PANTS: { top: "56%", left: "19%", width: "62%", height: "31%" },
-  SHOES: { top: "83%", left: "23%", width: "54%", height: "15%" },
+  CHEST: { top: "27%", left: "11%", width: "78%", height: "50%" },
+  PANTS: { top: "55%", left: "19%", width: "62%", height: "36%" },
+  SHOES: { top: "81%", left: "23%", width: "54%", height: "18%" },
 };
 
 /** Weapon zones are keyed by type (not a single shared box) since their natural art aspect

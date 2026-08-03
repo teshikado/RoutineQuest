@@ -55,6 +55,11 @@ async function main() {
   for (const piece of ["helmet-icon", "chest-icon", "pants-icon", "shoes-icon"]) {
     checks.push(check(path.join(PUB, "armor-sets", "samurai", `${piece}.png`)));
   }
+  for (const species of ["wolf", "snake", "lion", "tiger", "bear", "eagle", "panther"]) {
+    for (let stage = 1; stage <= 4; stage++) {
+      checks.push(check(path.join(PUB, "pets", species, `stage-${stage}.png`)));
+    }
+  }
 
   const results = await Promise.all(checks);
   const failed = results.filter((r) => !r.ok);
