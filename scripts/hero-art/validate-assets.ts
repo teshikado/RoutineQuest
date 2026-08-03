@@ -4,6 +4,14 @@ import sharp from "sharp";
 import { BUILD_KEYS } from "./generate-bodies";
 import { HAIR_STYLE_KEYS } from "./generate-hairstyles";
 
+const ARMOR_SET_KEYS = [
+  "iron-guard", "wander-hunter", "north-fur",
+  "sapphire-guard", "arcane-keeper", "night-runner",
+  "void-guard", "rune-lord", "shadow-blade",
+  "sky-warden", "sun-king", "star-breaker", "samurai",
+] as const;
+const ARMOR_SLOTS = ["helmet", "chest", "pants", "shoes"] as const;
+
 /** Verifies every asset this generator suite is responsible for: file exists, is a real PNG,
  * has an alpha channel, isn't empty/degenerate, and (for hairstyles/bodies, which must all
  * share one fixed per-gender canvas) has the expected dimensions. Run after any regeneration --
@@ -52,8 +60,24 @@ async function main() {
       }
     }
   }
-  for (const piece of ["helmet-icon", "chest-icon", "pants-icon", "shoes-icon"]) {
-    checks.push(check(path.join(PUB, "armor-sets", "samurai", `${piece}.png`)));
+  for (const set of ARMOR_SET_KEYS) {
+    for (const slot of ARMOR_SLOTS) {
+      checks.push(check(path.join(PUB, "armor-sets", set, `${slot}-icon.png`)));
+    }
+    for (const gender of GENDERS) {
+      // HELMET overlay is build-independent (see generate-armor-overlays.ts).
+      checks.push(check(path.join(PUB, "armor-sets", set, "overlay", "helmet", `${gender}.png`), NATIVE_SIZE[gender]));
+      for (const slot of ["chest", "pants", "shoes"] as const) {
+        for (const build of BUILD_KEYS) {
+          checks.push(check(path.join(PUB, "armor-sets", set, "overlay", slot, gender, `${build}.png`), NATIVE_SIZE[gender]));
+        }
+      }
+    }
+  }
+  for (const gender of GENDERS) {
+    for (const skin of SKINS) {
+      checks.push(check(path.join(PUB, "hand-grips", gender, `${skin}.png`)));
+    }
   }
   for (const species of ["wolf", "snake", "lion", "tiger", "bear", "eagle", "panther"]) {
     for (let stage = 1; stage <= 4; stage++) {

@@ -27,6 +27,31 @@ export function cloneCanvas(c: Canvas): Canvas {
   return { width: c.width, height: c.height, data: new Uint8ClampedArray(c.data) };
 }
 
+/** Nearest-neighbor resize (no interpolation, matching this project's flat pixel-art style --
+ * see the note on Canvas above). Used to place existing icon art onto a differently-sized
+ * native character canvas before further per-row reshaping. */
+export function resizeNearest(src: Canvas, width: number, height: number): Canvas {
+  const out = createCanvas(width, height);
+  for (let y = 0; y < height; y++) {
+    const sy = Math.min(src.height - 1, Math.floor((y * src.height) / height));
+    for (let x = 0; x < width; x++) {
+      const sx = Math.min(src.width - 1, Math.floor((x * src.width) / width));
+      setPixel(out, x, y, getPixel(src, sx, sy));
+    }
+  }
+  return out;
+}
+
+/** Alpha-composites all of `src` onto `dst` at (ox, oy) using blendPixel. */
+export function pasteInto(dst: Canvas, src: Canvas, ox: number, oy: number): void {
+  for (let y = 0; y < src.height; y++) {
+    for (let x = 0; x < src.width; x++) {
+      const p = getPixel(src, x, y);
+      if (p[3] > 0) blendPixel(dst, ox + x, oy + y, p);
+    }
+  }
+}
+
 export function cropCanvas(c: Canvas, x0: number, y0: number, w: number, h: number): Canvas {
   const out = createCanvas(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) setPixel(out, x, y, getPixel(c, x0 + x, y0 + y));
@@ -255,6 +280,101 @@ export function rowReshapeClamped(src: Canvas, centerX: number, rowScale: (t: nu
     for (let x = 0; x < src.width; x++) {
       const srcX = Math.round(centerX + (x - centerX) / scale);
       setPixel(out, x, y, getPixel(src, srcX, y));
+    }
+  }
+  return out;
+}
+
+/** Recenters and rescales every row of `c` so its own opaque span converges on a target
+ * half-width/center supplied per-row (typically measured from a *different* image, e.g. a real
+ * body silhouette) -- unlike rowReshapeClamped (which widens/narrows by a hand-tuned curve),
+ * this makes the row's rendered width match an externally measured target by construction,
+ * which is what closes an armor-icon/body-silhouette gap for good instead of trial-and-error
+ * box tuning.
+ *
+ * Both the source's own per-row bounds AND the target are smoothed with a moving average
+ * (`smoothRadius`) before the per-row scale/center is computed -- detailed icon art (studs,
+ * notches, overlapping plates) has much noisier row-to-row width than a body silhouette, and
+ * reacting to every single-row dip/bulge with a fresh scale factor produces a rippling,
+ * moire-like distortion instead of a clean conform (this was the actual failure mode the first,
+ * unsmoothed version of this function had). Smoothing the *scale curve* while still resampling
+ * the *raw* pixel row keeps the icon's real detail intact and only changes its overall taper.
+ * Rows with no opaque content on either side are left untouched. `scaleClamp` bounds how
+ * aggressively a very thin source row is stretched, so nothing balloons into a smear.
+ * `marginPx` caps the desired half-width so the placed content can never be pushed past the
+ * canvas edge around its own target center -- without this, a build whose measured body width
+ * already sits close to the frame (by design, see rowReshapeClamped) plus the armor's own
+ * outward padding could clip a real chunk of the armor off past the edge instead of merely
+ * leaving a small gap, which is a worse visual defect than the one being fixed. */
+export function conformRowsToTarget(
+  c: Canvas,
+  targetHalfWidthAt: (y: number) => number | null,
+  targetCenterAt: (y: number) => number | null,
+  paddingPx = 0,
+  opts: { scaleClamp?: [number, number]; smoothRadius?: number; marginPx?: number } = {}
+): Canvas {
+  const { scaleClamp = [0.4, 2.5], smoothRadius = 7, marginPx = 3 } = opts;
+  const h = c.height;
+  const ownHalf: (number | null)[] = new Array(h).fill(null);
+  const ownCenter: (number | null)[] = new Array(h).fill(null);
+  const tgtHalf: (number | null)[] = new Array(h).fill(null);
+  const tgtCenter: (number | null)[] = new Array(h).fill(null);
+  for (let y = 0; y < h; y++) {
+    const b = findOpaqueBoundsRow(c, y);
+    if (b) {
+      ownHalf[y] = (b[1] - b[0]) / 2;
+      ownCenter[y] = (b[0] + b[1]) / 2;
+    }
+    tgtHalf[y] = targetHalfWidthAt(y);
+    tgtCenter[y] = targetCenterAt(y);
+  }
+  const smooth = (arr: (number | null)[]): (number | null)[] => {
+    const out: (number | null)[] = new Array(h).fill(null);
+    for (let y = 0; y < h; y++) {
+      let sum = 0, n = 0;
+      for (let d = -smoothRadius; d <= smoothRadius; d++) {
+        const v = arr[y + d];
+        if (v !== undefined && v !== null) { sum += v; n++; }
+      }
+      out[y] = n > 0 ? sum / n : null;
+    }
+    return out;
+  };
+  const ownHalfS = smooth(ownHalf);
+  const ownCenterS = smooth(ownCenter);
+  const tgtHalfS = smooth(tgtHalf);
+  const tgtCenterS = smooth(tgtCenter);
+
+  const out = createCanvas(c.width, h);
+  for (let y = 0; y < h; y++) {
+    const oh = ownHalfS[y];
+    const oc = ownCenterS[y];
+    const th = tgtHalfS[y];
+    const tc = tgtCenterS[y];
+    if (oh === null || oc === null || th === null || tc === null) {
+      for (let x = 0; x < c.width; x++) setPixel(out, x, y, getPixel(c, x, y));
+      continue;
+    }
+    const desired = th + paddingPx;
+    const rawScale = oh > 0.5 ? desired / oh : 1;
+    let scale = Math.max(scaleClamp[0], Math.min(scaleClamp[1], rawScale));
+    // Hard override, applied *after* scaleClamp: never let this row's *actual* (unsmoothed)
+    // opaque content get pushed past the canvas edge, even if that means going below
+    // scaleClamp's floor -- margin safety always wins. Using the smoothed half-width here
+    // instead of the row's real own bounds was tried first and still let individual rows whose
+    // raw content is wider than their smoothed estimate clip through, since the clamp was
+    // checking a number smaller than what would actually get projected outward.
+    const ownRaw = ownHalf[y] !== null && ownCenter[y] !== null ? { half: ownHalf[y]!, center: ownCenter[y]! } : null;
+    if (ownRaw) {
+      const leftExtent = oc - (ownRaw.center - ownRaw.half);
+      const rightExtent = ownRaw.center + ownRaw.half - oc;
+      if (leftExtent > 0.5) scale = Math.min(scale, (tc - marginPx) / leftExtent);
+      if (rightExtent > 0.5) scale = Math.min(scale, (c.width - 1 - marginPx - tc) / rightExtent);
+      scale = Math.max(0.05, scale);
+    }
+    for (let x = 0; x < c.width; x++) {
+      const srcX = Math.round(oc + (x - tc) / scale);
+      setPixel(out, x, y, getPixel(c, srcX, y));
     }
   }
   return out;

@@ -9,11 +9,13 @@ import {
   characterBodySrc,
   hairOverlaySrc,
   equipmentIconSrc,
+  armorOverlaySrc,
+  handGripSrc,
   type BodyBuildKey,
   type HairColorKey,
   type SkinToneKey,
 } from "@/lib/hero-assets";
-import { LAYER_ORDER, FULL_BLEED_ZONE, zoneFor } from "@/lib/hero-render-config";
+import { LAYER_ORDER, FULL_BLEED_ZONE, zoneFor, gripZoneFor } from "@/lib/hero-render-config";
 
 export type CharacterAppearance = {
   characterType: HeroCharacterType;
@@ -95,10 +97,37 @@ export function CharacterSprite({
               </div>
             );
           }
+          if (layer === "GRIP") {
+            const weapon = equipped.WEAPON;
+            if (!weapon) return null;
+            const zone = gripZoneFor(weapon.weaponType);
+            return (
+              <div key="grip" className="absolute" style={{ top: zone.top, left: zone.left, width: zone.width, height: zone.height }}>
+                <Image src={handGripSrc(gender, appearance.skinTone)} alt="" fill sizes="60px" className="object-contain" style={{ imageRendering: "pixelated" }} />
+              </div>
+            );
+          }
           const item = equipped[layer];
           if (!item) return null;
-          const zone = zoneFor(layer, item.weaponType);
           const glow = RARITY_GLOW[item.rarity];
+          if (layer !== "WEAPON") {
+            // Armor is a full-canvas overlay already reshaped to hug this exact gender/build's
+            // body silhouette (see armorOverlaySrc) -- rendered full-bleed like BODY/HAIR
+            // instead of fit into a percentage box, so it can't leave an aspect-ratio gap.
+            return (
+              <div key={layer} className="absolute" style={{ top: FULL_BLEED_ZONE.top, left: FULL_BLEED_ZONE.left, width: FULL_BLEED_ZONE.width, height: FULL_BLEED_ZONE.height, filter: glow ? `drop-shadow(${glow})` : undefined }}>
+                <Image
+                  src={armorOverlaySrc(layer, item.rarity, gender, build, item.armorSetKey, item.legendaryStyle)}
+                  alt=""
+                  fill
+                  sizes="240px"
+                  className="object-contain"
+                  style={{ imageRendering: "pixelated" }}
+                />
+              </div>
+            );
+          }
+          const zone = zoneFor(layer, item.weaponType);
           return (
             <div
               key={layer}

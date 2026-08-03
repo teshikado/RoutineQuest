@@ -20,42 +20,27 @@ export const CHARACTER_NATIVE_SIZE: Record<"male" | "female", { width: number; h
   female: { width: 163, height: 316 },
 };
 
-/** Every layer is a full-bleed (0/0/100%/100%) image except armor/weapons, which use their own
- * Zone below. Order matters: later entries paint over earlier ones. */
-export const LAYER_ORDER: ("BODY" | "HAIR" | EquipmentSlot)[] = ["BODY", "SHOES", "PANTS", "CHEST", "HAIR", "HELMET", "WEAPON"];
+/** Every layer is a full-bleed (0/0/100%/100%) image except WEAPON/GRIP, which use their own
+ * small Zone below (a weapon is a free-standing object next to the body, not something that
+ * needs to conform to its silhouette the way armor does). Order matters: later entries paint
+ * over earlier ones. GRIP (the hand sprite drawn over the weapon's hilt) is last so the hand
+ * reads as gripping the weapon rather than the weapon floating past a closed fist. */
+export const LAYER_ORDER: ("BODY" | "HAIR" | EquipmentSlot | "GRIP")[] = ["BODY", "SHOES", "PANTS", "CHEST", "HAIR", "HELMET", "WEAPON", "GRIP"];
 
 export type Zone = { top: string; left: string; width: string; height: string };
 
 export const FULL_BLEED_ZONE: Zone = { top: "0%", left: "0%", width: "100%", height: "100%" };
 
-/** Where each armor item's own art is overlaid on the base character, as a percentage box of
- * the character's frame -- measured directly against the base sprite's body landmarks (head
- * ends ~41% down, torso/waist ~41-61%, hips-to-ankle ~56-88%, feet ~84-97%).
+/** HELMET/CHEST/PANTS/SHOES used to be a single flat icon fit into a percentage box via
+ * `object-contain` -- since the icon art is portrait-oriented and the boxes were not, every
+ * build always showed a bare-skin gap on both flanks. That approach is retired: armor is now
+ * rendered via `armorOverlaySrc` (hero-assets.ts) -- a full-canvas, per-gender/per-build image
+ * where scripts/hero-art/generate-armor-overlays.ts has already reshaped the original icon art
+ * row-by-row to match the real body silhouette's measured width, then composited it at the
+ * right position -- so CharacterSprite renders it full-bleed exactly like BODY/HAIR instead of
+ * fitting it into a box (see the Abschlussbericht).
  *
- * CHEST/PANTS/SHOES height was widened from the original zones in this pass -- every armor-set
- * icon (chest/pants/shoes across all 12 sets) is a *portrait*-oriented crop (width:height ratio
- * roughly 0.6-0.95), but the old zone boxes were *landscape* (wider than tall). Since the art is
- * placed with `object-contain` (preserve aspect ratio, fit within the box), a landscape box
- * around portrait art is always height-constrained: the icon renders at whatever width its own
- * aspect ratio implies at that height, leaving the rest of the box's width as empty transparent
- * margin -- which is what actually caused the "armor doesn't reach the shoulders/sides, bare
- * skin gap on both flanks" look reported across every body build (not particular to one, since
- * the geometry mismatch is the same for all of them; wider builds only made the *already
- * present* gap more visible). CHEST's zone box is now close to the icon's own aspect ratio,
- * verified by direct pixel composition (not just visual guessing) against sky-warden on the
- * dünn/kräftig/stabil builds -- see the Abschlussbericht. PANTS/SHOES were widened by the same
- * logic but are capped by how much vertical room exists before hitting the neighboring zone
- * (waist/knee for pants, the canvas bottom for shoes), so a smaller residual gap remains on the
- * widest builds -- fully closing it would need the icon art itself redrawn wider, which is out
- * of scope (see Abschlussbericht for that boundary). */
-export const ARMOR_ZONES: Record<Exclude<EquipmentSlot, "WEAPON">, Zone> = {
-  HELMET: { top: "3%", left: "19%", width: "62%", height: "33%" },
-  CHEST: { top: "27%", left: "11%", width: "78%", height: "50%" },
-  PANTS: { top: "55%", left: "19%", width: "62%", height: "36%" },
-  SHOES: { top: "81%", left: "23%", width: "54%", height: "18%" },
-};
-
-/** Weapon zones are keyed by type (not a single shared box) since their natural art aspect
+ * Weapon zones are keyed by type (not a single shared box) since their natural art aspect
  * ratios vary hugely, and are anchored near where the character's hand hangs at its side
  * (~72% across, ~58% down) so the hilt reads as gripped rather than the blade floating in
  * empty space beside the body. */
@@ -67,9 +52,25 @@ export const WEAPON_ZONES: Record<WeaponType, Zone> = {
   SPEAR: { top: "8%", left: "54%", width: "48%", height: "80%" },
 };
 
+/** Small hand-sprite box drawn over each weapon type's hilt (see hero-assets.ts handGripSrc and
+ * scripts/hero-art/generate-hand-grips.ts) -- positioned near the same "hand hangs at the
+ * character's side" point the weapon zones themselves are anchored to, with a small per-type
+ * nudge so the fist lines up with where that weapon's hilt actually sits within its own zone. */
+export const GRIP_ZONES: Record<WeaponType, Zone> = {
+  KATANA: { top: "53%", left: "62%", width: "18%", height: "14%" },
+  SWORD: { top: "51%", left: "66%", width: "16%", height: "13%" },
+  DAGGER: { top: "53%", left: "65%", width: "14%", height: "12%" },
+  GREATSWORD: { top: "49%", left: "60%", width: "18%", height: "14%" },
+  SPEAR: { top: "51%", left: "62%", width: "16%", height: "13%" },
+};
+
 export function zoneFor(slot: EquipmentSlot, weaponType: WeaponType | null): Zone {
   if (slot === "WEAPON") return WEAPON_ZONES[weaponType ?? "SWORD"];
-  return ARMOR_ZONES[slot];
+  return FULL_BLEED_ZONE;
+}
+
+export function gripZoneFor(weaponType: WeaponType | null): Zone {
+  return GRIP_ZONES[weaponType ?? "SWORD"];
 }
 
 // ---------- Body builds ----------
