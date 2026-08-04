@@ -39,6 +39,7 @@ import {
   Check,
   Loader2,
   Undo2,
+  History,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,15 @@ export function DashboardClient({
     };
     board: BoardItem[];
     groupBoard: GroupBoardItem[];
+    yesterdayOpenRoutines: {
+      id: string;
+      title: string;
+      description: string | null;
+      icon: string;
+      color: string;
+      difficulty: Difficulty;
+      timeOfDay: string | null;
+    }[];
     weekMini: { dateKey: string; scheduled: number; done: number }[];
     todayPlanEntries: DashboardPlanEntry[];
     manualOrder: ManualOrderEntry[];
@@ -205,6 +215,10 @@ export function DashboardClient({
         : false,
     }))
   );
+  // "Gestern noch offen" -- always open-only (a completed one is never shown, see
+  // getYesterdayOpenRoutines), so unlike `board` there's no completed/canUndo state to
+  // track: a successful nachtragen just removes the routine from this array outright.
+  const [yesterdayRoutines, setYesterdayRoutines] = useState(data.yesterdayOpenRoutines);
   const [groupBoard, setGroupBoard] = useState<(GroupTaskCardData & { groupId: string })[]>(
     data.groupBoard.map((b) => ({
       groupRoutine: b.groupRoutine,
@@ -351,6 +365,48 @@ export function DashboardClient({
     // Refreshes server-rendered numbers this component doesn't own locally (total XP /
     // level bar, streak, week mini, group leaderboards) without resetting the board
     // state above, since that lives in useState and isn't re-derived from props.
+    router.refresh();
+  }
+
+  /** "Gestern noch offen" nachtragen -- unlike handleToggle this is never a toggle: the
+   * routine is only ever in this list while open, and a successful call always removes it
+   * outright (no optimistic flip/rollback of a `completed` flag to manage). No `date` is
+   * ever sent -- the server always resolves "yesterday" itself (see /api/completions/yesterday). */
+  async function handleYesterdayToggle(routineId: string) {
+    const routine = yesterdayRoutines.find((r) => r.id === routineId);
+    if (!routine) {
+      showToast(STALE_STATE_ERROR, "error");
+      return;
+    }
+
+    let res: Response;
+    try {
+      res = await fetch("/api/completions/yesterday", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ routineId }),
+      });
+    } catch {
+      showToast(GENERIC_SAVE_ERROR, "error");
+      return;
+    }
+
+    const result = await res.json().catch(() => null);
+    if (!res.ok || !result) {
+      showToast(result?.error ?? GENERIC_SAVE_ERROR, "error");
+      return;
+    }
+
+    setYesterdayRoutines((prev) => prev.filter((r) => r.id !== routineId));
+    showToast("Routine für gestern nachgetragen.", "xp");
+    setAnnouncement(`${routine.title} wurde für gestern nachgetragen.`);
+
+    if (result.leveledUp) {
+      setTimeout(() => setLevelUp({ level: result.level, rankedUp: result.rankedUp }), 600);
+    }
+
+    // Same reasoning as handleToggle: total XP / level bar / streak / week mini live in
+    // server-rendered props, not in this component's own state.
     router.refresh();
   }
 
@@ -676,6 +732,47 @@ export function DashboardClient({
           <div className="text-xs text-[#C8C5D2]">Tage Streak · Rekord {data.user.longestStreak}</div>
         </Card>
       </RevealGroup>
+
+      <AnimatePresence>
+        {yesterdayRoutines.length > 0 && (
+          <motion.div
+            key="yesterday-section"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Reveal delay={0.02}>
+              <Card data-testid="yesterday-card" className="bg-[#0D0D13]">
+                <div className="flex items-center gap-2 mb-1">
+                  <History className="h-4 w-4 text-[#8D8998]" />
+                  <h2 className="font-bold text-[#F8F7FC]">Gestern noch offen</h2>
+                </div>
+                <p className="text-xs text-[#8D8998] mb-3">
+                  Du hast gestern etwas vergessen? Hier kannst du offene Routinen von gestern noch nachträglich
+                  abhaken.
+                </p>
+                <div className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {yesterdayRoutines.map((routine) => (
+                      <motion.div
+                        key={routine.id}
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        transition={{ duration: 0.25 }}
+                      >
+                        <TaskCard data={{ routine, completed: false, canUndo: false }} onToggle={handleYesterdayToggle} />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </Card>
+            </Reveal>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Reveal delay={0.05}>
         <Card data-testid="heute-card">

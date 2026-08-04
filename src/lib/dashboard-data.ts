@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { getDayBoard } from "./completion-service";
+import { getDayBoard, getYesterdayOpenRoutines } from "./completion-service";
 import { getGroupRoutineDayBoard } from "./group-routine-data";
 import { dateKey, existedOn, getWeekInfo, isoWeekday, todayDateOnly, zonedStartOfDayUtc } from "./dates";
 
@@ -8,6 +8,7 @@ export async function getDashboardData(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const board = await getDayBoard(userId, today);
   const groupBoard = await getGroupRoutineDayBoard(userId, today);
+  const yesterdayOpenRoutines = await getYesterdayOpenRoutines(userId);
 
   // Interval overlap, not `date: today` -- a block that started yesterday and crosses
   // midnight into today (e.g. 22:00-02:00) must still show up as "today's" entry even
@@ -51,6 +52,15 @@ export async function getDashboardData(userId: string) {
     user,
     board,
     groupBoard,
+    yesterdayOpenRoutines: yesterdayOpenRoutines.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      icon: r.icon,
+      color: r.color,
+      difficulty: r.difficulty,
+      timeOfDay: r.timeOfDay,
+    })),
     weekMini,
     // Lean today-relevant fields only -- the client recomputes "next open entry" /
     // done-open stats itself (see dashboard-client.tsx) so it can react instantly to a

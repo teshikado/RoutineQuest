@@ -23,7 +23,9 @@ export type CompletionErrorCode =
   | "FUTURE_DAY"
   | "NOT_FOUND"
   | "NOT_SCHEDULED_TODAY"
-  | "UNDO_WINDOW_EXPIRED";
+  | "UNDO_WINDOW_EXPIRED"
+  | "NOT_SCHEDULED_YESTERDAY"
+  | "ALREADY_COMPLETED_YESTERDAY";
 
 export class CompletionError extends Error {
   code: CompletionErrorCode;
@@ -301,4 +303,42 @@ export async function getDayBoard(userId: string, date: Date) {
     completed: completedIds.has(r.id),
     completion: completions.find((c) => c.routineId === r.id) ?? null,
   }));
+}
+
+/** The single, server-side source of truth for "which calendar day is 'gestern' right
+ * now" -- the nachtragen feature never accepts a client-supplied date anywhere, precisely
+ * so there is no value to validate/manipulate in the first place (see completeYesterdayRoutine). */
+export function getYesterdayDate(): Date {
+  return addDaysUtc(todayDateOnly(), -1);
+}
+
+/** Routines the user still hasn't completed for yesterday -- reuses getDayBoard (the same
+ * scheduling/archived/createdAt eligibility rules as "Heute") so this can never show a
+ * routine that wasn't genuinely due yesterday, and filters to the still-open ones since
+ * the "Gestern noch offen" section never lists anything already done. */
+export async function getYesterdayOpenRoutines(userId: string): Promise<Routine[]> {
+  const board = await getDayBoard(userId, getYesterdayDate());
+  return board.filter((b) => !b.completed).map((b) => b.routine);
+}
+
+/** The one write path for the "Gestern noch offen" nachtragen feature. Deliberately takes
+ * no date parameter at all -- yesterday is always computed here, server-side, so there is
+ * no client-supplied date to validate or that could be manipulated into vorgestern (or any
+ * other day). Re-validates eligibility against getScheduledRoutines (not just toggleCompletion's
+ * own weekday-only check) so a routine created today, or archived/paused before yesterday,
+ * can never be nachgetragen even if its id is guessed. Always a one-way "mark done" -- unlike
+ * toggleCompletion this never flips an existing completion back off, so a second call (double
+ * click, retry, race) surfaces as ALREADY_COMPLETED_YESTERDAY instead of silently undoing the
+ * first call's XP/streak effects. */
+export async function completeYesterdayRoutine(userId: string, routineId: string): Promise<ToggleResult> {
+  const yesterday = getYesterdayDate();
+  const scheduled = await getScheduledRoutines(prisma, userId, yesterday);
+  if (!scheduled.some((r) => r.id === routineId)) {
+    throw new CompletionError("Nur offene Routinen von gestern können nachgetragen werden.", "NOT_SCHEDULED_YESTERDAY");
+  }
+  const existing = await prisma.completion.findUnique({ where: { routineId_date: { routineId, date: yesterday } } });
+  if (existing) {
+    throw new CompletionError("Diese Routine wurde für gestern bereits erledigt.", "ALREADY_COMPLETED_YESTERDAY");
+  }
+  return toggleCompletion(userId, routineId, yesterday);
 }
