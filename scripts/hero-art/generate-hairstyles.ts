@@ -82,6 +82,28 @@ function shadeColor(colorKey: (typeof COLORS)[number], t: number, edgeFrac: numb
   return [r, g, b, a];
 }
 
+/** `rowSilhouette` fills a solid width-per-row mass with no idea where the face is, which is
+ * exactly why shortMessy/shortSidePart/shortWarrior used to render as a featureless dome
+ * completely covering the eyes (confirmed live: 27-69% of the real face-cutout region was
+ * opaque on top of the face). `short-classic`'s cap is pixel-diff *extracted* from real
+ * hand-derived art, so it already has the correct face-shaped transparent hole at this exact
+ * canvas position -- this punches that same real hole into any procedurally-filled canvas
+ * instead of inventing a new one, so every style shows the same face the body/eyes art already
+ * draws underneath. */
+function punchFaceHole(c: Canvas, holeRef: Canvas): void {
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      if (holeRef.data[i + 3] < 10) {
+        c.data[i] = 0;
+        c.data[i + 1] = 0;
+        c.data[i + 2] = 0;
+        c.data[i + 3] = 0;
+      }
+    }
+  }
+}
+
 // ---------- Procedural styles ----------
 
 function shortMessy(geo: HeadGeo, colorKey: (typeof COLORS)[number]): Canvas {
@@ -151,18 +173,27 @@ function longStraightSideVariant(geo: HeadGeo, colorKey: (typeof COLORS)[number]
 
 function ponytail(geo: HeadGeo, colorKey: (typeof COLORS)[number], cap: Canvas): Canvas {
   const c = cloneCanvas(cap);
-  const tailTop = geo.top + 6;
-  const tailLen = 96;
-  rowSilhouette(c, tailTop, tailLen, geo.centerX, profile([[0, 9], [0.15, 7], [0.9, 4], [1, 1]]), (t, dx) => shadeColor(colorKey, t, Math.abs(dx)), true);
+  // Was centered on centerX starting near the top of the head -- on this front-facing sprite
+  // that drew a solid vertical strand straight down through the eyes/face (confirmed live).
+  // A ponytail is gathered at the back of the head, so from the front it reads as a strand
+  // swept to one side, hanging from the nape (capBottom) downward -- not from the crown through
+  // the face.
+  const tailX = geo.centerX + Math.round(geo.halfExtent * 0.62);
+  const tailTop = geo.capBottom - 8;
+  const tailLen = 92;
+  rowSilhouette(c, tailTop, tailLen, tailX, profile([[0, 9], [0.15, 7], [0.9, 4], [1, 1]]), (t, dx) => shadeColor(colorKey, t, Math.abs(dx)), true);
   // tie band
-  for (let dx = -6; dx <= 6; dx++) blendPixel(c, geo.centerX + dx, tailTop + 4, HAIR_SHADING.black.shadow);
+  for (let dx = -6; dx <= 6; dx++) blendPixel(c, tailX + dx, tailTop + 4, HAIR_SHADING.black.shadow);
   return c;
 }
 
 function warriorBraid(geo: HeadGeo, colorKey: (typeof COLORS)[number], cap: Canvas): Canvas {
   const c = cloneCanvas(cap);
-  const tailTop = geo.top + 10;
-  const tailLen = 108;
+  // Same fix as ponytail: hangs from the nape (capBottom), not from the crown down through the
+  // face. Kept centered (unlike the side-swept ponytail) since a single thick warrior braid
+  // plausibly hangs straight down the back-center.
+  const tailTop = geo.capBottom - 4;
+  const tailLen = 88;
   for (let i = 0; i < tailLen; i++) {
     const y = tailTop + i;
     const t = i / tailLen;
@@ -183,16 +214,26 @@ async function main() {
     const shortClassic = await extractExisting(gender, "variants", 0.42);
     const longStraight = await extractExisting(gender, "variants-long", 0.65);
 
+    // Real extracted alpha shape -- same face-hole position for every color (see punchFaceHole).
+    const faceHole = shortClassic.black;
+
     for (const color of COLORS) {
+      const messy = shortMessy(geo, color);
+      punchFaceHole(messy, faceHole);
+      const sidePart = shortSidePart(geo, color);
+      punchFaceHole(sidePart, faceHole);
+      const warrior = shortWarrior(geo, color);
+      punchFaceHole(warrior, faceHole);
+
       const outputs: Record<HairStyleKey, Canvas> = {
         "short-classic": shortClassic[color],
-        "short-messy": shortMessy(geo, color),
-        "short-side-part": shortSidePart(geo, color),
-        "short-warrior": shortWarrior(geo, color),
+        "short-messy": messy,
+        "short-side-part": sidePart,
+        "short-warrior": warrior,
         "long-straight": longStraight[color],
         "long-side-part": longStraightSideVariant(geo, color, longStraight[color]),
         "long-ponytail": ponytail(geo, color, shortClassic[color]),
-        "long-warrior-braid": warriorBraid(geo, color, shortWarrior(geo, color)),
+        "long-warrior-braid": warriorBraid(geo, color, warrior),
       };
       for (const style of HAIR_STYLE_KEYS) {
         const outDir = path.join(OUT_ROOT, style, gender);
