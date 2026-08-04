@@ -53,12 +53,29 @@ const SLOT_DIR: Record<Slot, string> = { HELMET: "helmet", CHEST: "chest", PANTS
 // Baseline placement box (fraction of native canvas) -- only a starting position/size for the
 // icon before per-row conforming takes over; keeps the vertical anchor (where torso/hip/foot
 // art starts) at the value already tuned against the base sprite's own landmarks.
+//
+// CHEST/PANTS/SHOES were widened (0.78/0.62/0.54 -> 0.92/0.74/0.70) from their original narrow
+// boxes. Confirmed live and via direct pixel measurement: conformRowsToTarget's required
+// per-row scale for iron-guard's chest climbed smoothly from 1.1x up to a clamped 2.5x ceiling
+// as the icon's own tapering waist silhouette (own half-width down to ~14px) fell far short of
+// the target body's hip width (~78px half-width) -- a single row-independent horizontal stretch
+// that large visibly rounds/inflates crisp plate edges into a "balloon" silhouette (shoulder
+// pads and belt buckle lose their shape). Starting from a wider placement box means less stretch
+// is needed at every row to still reach full body-width coverage, so scaleClamp below can be
+// tightened without reintroducing the bare-skin gaps this system exists to prevent -- verified
+// on iron-guard: crisper shoulder/belt shape, full coverage, no gaps (see the Abschlussbericht).
 const PLACEMENT: Record<Slot, { top: number; left: number; width: number; height: number }> = {
   HELMET: { top: 0.03, left: 0.19, width: 0.62, height: 0.33 },
-  CHEST: { top: 0.27, left: 0.11, width: 0.78, height: 0.5 },
-  PANTS: { top: 0.55, left: 0.19, width: 0.62, height: 0.36 },
-  SHOES: { top: 0.81, left: 0.23, width: 0.54, height: 0.18 },
+  CHEST: { top: 0.25, left: 0.04, width: 0.92, height: 0.54 },
+  PANTS: { top: 0.55, left: 0.13, width: 0.74, height: 0.36 },
+  SHOES: { top: 0.79, left: 0.15, width: 0.7, height: 0.2 },
 };
+
+// Paired with the widened PLACEMENT boxes above: caps how far any single row is allowed to
+// stretch (default in conformRowsToTarget is 2.5x) so a tapering part of the source icon (e.g.
+// a waist taper) can't get blown up into a distorted blob just to reach the target body's width
+// at that row -- the wider starting box above already does most of the work of closing that gap.
+const CONFORM_SCALE_CLAMP: [number, number] = [0.4, 1.7];
 
 // Small outward padding (px, on the fixed native canvas) so armor reads as sitting *on top of*
 // the body rather than being exactly skin-width -- kept small since these are already close
@@ -111,7 +128,8 @@ async function generateOne(setKey: string, slot: Slot, gender: Gender, build: Bo
     placed,
     (y) => (bounds[y] ? (bounds[y]![1] - bounds[y]![0]) / 2 : null),
     (y) => (bounds[y] ? (bounds[y]![0] + bounds[y]![1]) / 2 : null),
-    PADDING_PX[slot]
+    PADDING_PX[slot],
+    { scaleClamp: CONFORM_SCALE_CLAMP }
   );
 }
 
