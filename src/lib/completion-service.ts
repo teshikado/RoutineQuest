@@ -13,7 +13,6 @@ import {
 } from "./dates";
 import { getLevelProgress, getRankForLevel } from "./xp";
 import { notify } from "./notifications";
-import { awardMeatForCompletion, reverseMeatForCompletion } from "./hero-service";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -237,7 +236,6 @@ export async function toggleCompletion(userId: string, routineId: string, date: 
       await tx.xpTransaction.create({
         data: { userId, amount: xp, reason: "TASK_COMPLETE", refDate: date, refId: completion.id },
       });
-      await awardMeatForCompletion(tx, userId, "ROUTINE_COMPLETION", completion.id);
       action = "completed";
       xpDelta = xp;
     } else {
@@ -252,7 +250,6 @@ export async function toggleCompletion(userId: string, routineId: string, date: 
         where: { userId_reason_refDate_refId: { userId, reason: "TASK_COMPLETE", refDate: date, refId: existing.id } },
       });
       if (tx1) await tx.xpTransaction.delete({ where: { id: tx1.id } });
-      await reverseMeatForCompletion(tx, userId, "ROUTINE_COMPLETION", existing.id);
       await tx.completion.delete({ where: { id: existing.id } });
       action = "uncompleted";
       xpDelta = -(tx1?.amount ?? existing.xpAwarded);

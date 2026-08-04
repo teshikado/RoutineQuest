@@ -51,7 +51,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyRoutinesIllustration, EmptyGroupsIllustration } from "@/components/ui/illustrations";
 import { TaskCard, type TaskCardData } from "@/components/dashboard/task-card";
 import { GroupTaskCard, type GroupTaskCardData } from "@/components/dashboard/group-task-card";
-import { HeroCard, type DashboardHeroSummary } from "@/components/dashboard/hero-card";
 import { LevelUpModal } from "@/components/dashboard/level-up-modal";
 import { useToast } from "@/components/toast";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
@@ -191,7 +190,6 @@ export function DashboardClient({
     todayPlanEntries: DashboardPlanEntry[];
     manualOrder: ManualOrderEntry[];
     groups: { id: string; name: string; icon: string; color: string; memberCount: number }[];
-    heroSummary: DashboardHeroSummary;
   };
 }) {
   const router = useRouter();
@@ -912,10 +910,6 @@ export function DashboardClient({
             )}
           </AnimatePresence>
         </Card>
-      </Reveal>
-
-      <Reveal delay={0.1}>
-        <HeroCard summary={data.heroSummary} />
       </Reveal>
 
       <RevealGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4" stagger={0.06}>

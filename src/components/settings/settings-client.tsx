@@ -263,11 +263,6 @@ export function SettingsClient({ appVersion }: { appVersion: string }) {
           werden wie deine übrigen Kontodaten gespeichert und bei einer Kontolöschung mitgelöscht.
         </CardSubtitle>
         <CardSubtitle className="mt-3">
-          Dein Held (Charaktertyp, Heldenname, Aussehen, Inventar, Ausrüstung, Haustier samt Entwicklungsstufe,
-          Fleischbestand, Fleischtransaktionen, Fütterungsverlauf und Levelbelohnungen) ist ebenfalls ausschließlich
-          für dich sichtbar und wird nicht automatisch mit anderen Nutzern oder Gruppenmitgliedern geteilt.
-        </CardSubtitle>
-        <CardSubtitle className="mt-3">
           Die vollständige Datenschutzerklärung findest du unter{" "}
           <Link href="/datenschutz" className="text-[#A855F7] font-semibold hover:underline">
             /datenschutz

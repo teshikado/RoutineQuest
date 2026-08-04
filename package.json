@@ -1,6 +1,6 @@
 {
   "name": "routinequest",
-  "version": "1.14.3",
+  "version": "1.15.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -10,8 +10,6 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "hero-art:generate": "tsx scripts/hero-art/generate-bodies.ts && tsx scripts/hero-art/generate-hairstyles.ts && tsx scripts/hero-art/generate-samurai.ts && tsx scripts/hero-art/generate-armor-overlays.ts && tsx scripts/hero-art/generate-hand-grips.ts",
-    "hero-art:validate": "tsx scripts/hero-art/validate-assets.ts",
     "electron:dev": "cross-env APP_URL=http://localhost:3000 electron .",
     "electron": "electron .",
     "icon": "node build/generate-icon.js",

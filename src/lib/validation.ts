@@ -280,37 +280,3 @@ export const dayReviewSchema = z.object({
   mood: z.enum(["GREAT", "GOOD", "OKAY", "HARD", "BAD"]).optional().nullable(),
   note: z.string().trim().max(1000).optional().nullable(),
 });
-
-// ---------- Held (hero) ----------
-
-export const heroCharacterSchema = z.object({
-  heroName: z.string().trim().max(24).optional().nullable(),
-  characterType: z.enum(["MALE", "FEMALE"]),
-  skinTone: z.enum(["very-light", "light", "medium", "dark", "very-dark"]),
-  hairColor: z.enum(["black", "darkbrown", "brown", "blonde", "red", "gray", "silver", "purple"]),
-  hairStyle: z.enum([
-    "short-classic", "short-messy", "short-side-part", "short-warrior",
-    "long-straight", "long-side-part", "long-ponytail", "long-warrior-braid",
-    // legacy values from before the 8-style system -- still accepted so old clients/links
-    // (and the pre-fill from an existing profile's raw DB value) never hard-fail validation.
-    "kurz", "lang",
-  ]),
-  bodyBuild: z.enum(["duenn", "normal", "muskuloes", "kraeftig", "stabil"]),
-});
-
-export const heroLegendaryStyleSchema = z.object({
-  itemId: z.string().min(1),
-  legendaryStyle: z.enum(["himmels-paladin", "schattenfuerst", "drachenkoenig", "samurai"]),
-});
-
-export const heroPetSelectSchema = z.object({
-  species: z.enum(["WOLF", "SNAKE", "LION", "TIGER", "BEAR", "EAGLE", "PANTHER"]),
-});
-
-export const heroItemActionSchema = z.object({
-  itemId: z.string().min(1),
-});
-
-export const heroEquipSetSchema = z.object({
-  armorSetKey: z.string().min(1),
-});

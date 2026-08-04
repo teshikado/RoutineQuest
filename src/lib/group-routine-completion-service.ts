@@ -6,7 +6,6 @@ import { notify } from "./notifications";
 import { recomputeTotalXp } from "./completion-service";
 import { isGroupRoutinePlannedDay } from "./group-routine-data";
 import { computeWeeklyTargetStreak } from "./group-routine-weekly";
-import { awardMeatForCompletion, reverseMeatForCompletion } from "./hero-service";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -140,7 +139,6 @@ export async function toggleGroupRoutineCompletion(
       await tx.xpTransaction.create({
         data: { userId, amount: routine.xpReward, reason: "GROUP_TASK_COMPLETE", refDate: date, refId: completion.id },
       });
-      await awardMeatForCompletion(tx, userId, "GROUP_ROUTINE_COMPLETION", completion.id);
       action = "completed";
       xpDelta = routine.xpReward;
     } else {
@@ -157,7 +155,6 @@ export async function toggleGroupRoutineCompletion(
         },
       });
       if (relatedTx) await tx.xpTransaction.delete({ where: { id: relatedTx.id } });
-      await reverseMeatForCompletion(tx, userId, "GROUP_ROUTINE_COMPLETION", existing.id);
       await tx.groupRoutineCompletion.delete({ where: { id: existing.id } });
       action = "uncompleted";
       xpDelta = -(relatedTx?.amount ?? existing.xpAwarded);

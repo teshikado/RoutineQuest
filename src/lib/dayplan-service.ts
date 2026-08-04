@@ -6,7 +6,6 @@ import { recomputeTotalXp } from "./completion-service";
 import { toggleCompletion, CompletionError } from "./completion-service";
 import { toggleGroupRoutineCompletion, GroupRoutineCompletionError } from "./group-routine-completion-service";
 import { DAYPLAN_ENTRY_XP, MAX_DAYPLAN_RANGE_DAYS } from "./dayplan-constants";
-import { awardMeatForCompletion, reverseMeatForCompletion } from "./hero-service";
 
 export type DayPlanErrorCode =
   | "NOT_FOUND"
@@ -1165,7 +1164,6 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
           await tx.xpTransaction.delete({ where: { id: existingXp.id } });
           await recomputeTotalXp(tx, userId);
         }
-        await reverseMeatForCompletion(tx, userId, "DAYPLAN_ENTRY", entry.id);
       });
     }
     const updated = await prisma.dayPlanEntry.update({ where: { id: entryId }, data: { status: "PLANNED", completedAt: null } });
@@ -1228,7 +1226,6 @@ export async function toggleEntryComplete(userId: string, entryId: string): Prom
           xpDelta = DAYPLAN_ENTRY_XP;
         }
       }
-      await awardMeatForCompletion(tx, userId, "DAYPLAN_ENTRY", entry.id);
     });
   }
 

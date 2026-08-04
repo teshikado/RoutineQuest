@@ -35,34 +35,28 @@ export default function DatenschutzPage() {
             Nutzungsdaten: Routinen, Erledigungen, XP, Level, Streaks, Tagesplanung, Gruppen- und
             Ranglisten-Fortschritt.
           </p>
-          <p>
-            Heldensystem: Charaktertyp (männlich/weiblich), Heldenname, Aussehen (Hautfarbe, Haarfarbe, Frisur),
-            Inventar und Ausrüstungsgegenstände, gewähltes Haustier samt Entwicklungsstufe, Fleischbestand,
-            Fleischtransaktionen, Fütterungsverlauf und Levelbelohnungen.
-          </p>
         </Section>
 
         <Section title="3. Zweck der Verarbeitung">
           <p>
             Die genannten Daten werden ausschließlich verarbeitet, um die Funktionen von RoutineQuest bereitzustellen
-            (Anmeldung, Fortschrittsanzeige, Gruppen- und Ranglistenfunktionen, Heldensystem). Es findet keine
-            Weitergabe an Werbenetzwerke oder sonstige Dritte statt.
+            (Anmeldung, Fortschrittsanzeige, Gruppen- und Ranglistenfunktionen). Es findet keine Weitergabe an
+            Werbenetzwerke oder sonstige Dritte statt.
           </p>
         </Section>
 
         <Section title="4. Sichtbarkeit gegenüber anderen Nutzern">
           <p>
-            Routinen-Titel, Tagesplanung und alle Heldendaten (Charakter, Inventar, Ausrüstung, Haustier, Fleisch,
-            Belohnungen) sind privat und werden nicht automatisch mit anderen Nutzern oder Gruppenmitgliedern
-            geteilt. In Gruppen werden ausschließlich aggregierte Fortschrittswerte (XP, erledigte Aufgaben,
-            Erfolgsquote, Streak, Level) sichtbar.
+            Routinen-Titel und Tagesplanung sind privat und werden nicht automatisch mit anderen Nutzern oder
+            Gruppenmitgliedern geteilt. In Gruppen werden ausschließlich aggregierte Fortschrittswerte (XP,
+            erledigte Aufgaben, Erfolgsquote, Streak, Level) sichtbar.
           </p>
         </Section>
 
         <Section title="5. Speicherdauer">
           <p>
             Deine Daten werden gespeichert, solange dein Konto besteht. Bei einer Kontolöschung werden alle
-            zugehörigen Daten, einschließlich der Heldendaten, mitgelöscht.
+            zugehörigen Daten mitgelöscht.
           </p>
         </Section>
 
